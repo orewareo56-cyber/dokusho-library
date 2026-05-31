@@ -1528,7 +1528,36 @@ nav button {
     width: 100%;
   }
   .badge-grid {
-    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  }
+  .badge-item {
+    min-height: 104px;
+    padding: 0.5rem 0.42rem;
+  }
+  .badge-item .badge-name {
+    font-size: 0.64rem;
+    line-height: 1.35;
+  }
+  .badge-item .text-sm {
+    font-size: 0.56rem !important;
+    line-height: 1.35;
+    margin-top: 0.18rem !important;
+  }
+  .badge-item .xp-bar-wrap {
+    margin-top: 0.28rem !important;
+  }
+  .badge-summary {
+    font-size: 0.78rem;
+    margin-bottom: 0.55rem;
+    padding: 0.55rem;
+  }
+  .badge-summary strong {
+    font-size: 1.05rem;
+  }
+  .motivation-panel {
+    font-size: 0.78rem;
+    padding: 0.65rem;
   }
   #tiny-banner {
     align-items: stretch;
@@ -1863,17 +1892,13 @@ nav button {
       <div class="xp-bar" id="ach-xp-bar"></div>
     </div>
     <div class="text-sm mt1">次のレベルまで: <span id="ach-next-level"></span></div>
+    <div class="motivation-panel mt1" id="motivation-panel"></div>
   </div>
 
   <div class="card">
     <h2>実績一覧</h2>
     <div class="badge-summary" id="badge-summary"></div>
     <div class="badge-grid" id="badge-grid"></div>
-  </div>
-
-  <div class="card">
-    <h2>モチベアップ</h2>
-    <div class="motivation-panel" id="motivation-panel"></div>
   </div>
 </div>
 
