@@ -462,6 +462,24 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
   color: var(--accent2);
   font-size: 1.25rem;
 }
+.badge-view-toggle {
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.badge-view-toggle .btn {
+  min-width: 104px;
+}
+.badge-empty {
+  color: var(--text2);
+  line-height: 1.7;
+  padding: 0.4rem 0;
+}
+.session-actions {
+  align-items: center;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
 .level-title {
   color: var(--accent2);
   display: inline-block;
@@ -1780,8 +1798,9 @@ nav button {
     <div class="card">
       <p style="font-size:0.85rem; line-height:1.7; color:var(--text2);" id="session-quote"></p>
     </div>
-    <div class="text-center mt2">
-      <button class="btn btn-danger" onclick="endSession()">セッションを終了する</button>
+    <div class="flex session-actions mt2">
+      <button class="btn btn-danger" onclick="endSession()">終了して記録する</button>
+      <button class="btn btn-outline" onclick="cancelSession()">記録せず中止する</button>
     </div>
   </div>
 
@@ -1896,8 +1915,12 @@ nav button {
   </div>
 
   <div class="card">
-    <h2>実績一覧</h2>
+    <h2 id="badge-list-title">未獲得の実績</h2>
     <div class="badge-summary" id="badge-summary"></div>
+    <div class="flex badge-view-toggle">
+      <button class="btn btn-sm" id="badge-view-pending" onclick="setAchievementView('pending')">未獲得</button>
+      <button class="btn btn-sm btn-outline" id="badge-view-earned" onclick="setAchievementView('earned')">獲得済み</button>
+    </div>
     <div class="badge-grid" id="badge-grid"></div>
   </div>
 </div>
@@ -1933,9 +1956,11 @@ const DB = {
 const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [] };
 let data = Object.assign({}, _defaults, DB.load());
 if (!Array.isArray(data.quizAnswers)) data.quizAnswers = [];
+if (!Array.isArray(data.earnedBadges)) data.earnedBadges = [];
 const ACTIVE_SESSION_KEY = 'dokusho_active_session';
 let timerInterval = null;
 let sessionStart = null;
+let achievementView = 'pending';
 let currentBookFilter = 'all';
 let editingBookId = null;
 let barcodeStream = null;
@@ -2007,6 +2032,45 @@ function isbnBooks(d) {
 function quizAnswerCount(d) {
   return Array.isArray(d.quizAnswers) ? d.quizAnswers.length : 0;
 }
+function sinceTimestamp(days) {
+  return Date.now() - days * 86400000;
+}
+function sessionsSinceDays(d, days) {
+  const cutoff = sinceTimestamp(days);
+  return d.sessions.filter(s => new Date(s.date).getTime() >= cutoff);
+}
+function minutesSinceDays(d, days) {
+  return sessionsSinceDays(d, days).reduce((sum, s) => sum + (s.minutes || 0), 0);
+}
+function activeDaysSinceDays(d, days) {
+  return new Set(sessionsSinceDays(d, days).map(s => new Date(s.date).toDateString())).size;
+}
+function quizAnswersSinceDays(d, days) {
+  if (!Array.isArray(d.quizAnswers)) return 0;
+  const cutoff = sinceTimestamp(days);
+  return d.quizAnswers.filter(a => new Date(a.date).getTime() >= cutoff).length;
+}
+function dailyGoalDays(d) {
+  const buckets = {};
+  d.sessions.forEach(s => {
+    const key = new Date(s.date).toDateString();
+    buckets[key] = (buckets[key] || 0) + (s.minutes || 0);
+  });
+  const goal = Math.max(1, d.dailyGoalMinutes || 60);
+  return Object.values(buckets).filter(minutes => minutes >= goal).length;
+}
+function manualSessionCount(d) {
+  return d.sessions.filter(s => s.manual).length;
+}
+function bookVariety(d) {
+  return new Set(d.sessions.map(s => s.bookId).filter(Boolean)).size;
+}
+function genreVariety(d) {
+  return new Set(d.sessions.map(s => s.genre).filter(Boolean)).size;
+}
+function memoCount(d) {
+  return d.sessions.filter(s => s.memo && String(s.memo).trim()).length;
+}
 
 const BADGES = [
   { id: 'first_session', name: '初入館', desc: '初めてのセッション完了', progressFn: d => ({ current: d.sessions.length, max: 1 }) },
@@ -2040,6 +2104,26 @@ const BADGES = [
   { id: 'answer_note_10', name: '思索の束', desc: '問いへの回答メモを10件保存', progressFn: d => ({ current: quizAnswerCount(d), max: 10 }) },
   { id: 'daily_120', name: '長机の午後', desc: '1日に120分以上読書', progressFn: d => ({ current: maxDailyMinutes(d), max: 120 }) },
   { id: 'recovery_used', name: '途切れない灯', desc: 'リカバリー権を初めて使用', progressFn: d => ({ current: d.recoveryUsed ? 1 : 0, max: 1 }) },
+  { id: 'session_100', name: '百回目の栞', desc: 'セッション100回達成', progressFn: d => ({ current: d.sessions.length, max: 100 }) },
+  { id: 'time_3000', name: '三千分の書架', desc: '総読書時間3000分達成', progressFn: d => ({ current: d.totalMinutes, max: 3000 }) },
+  { id: 'books_25', name: '蔵書目録の厚み', desc: '本を25冊登録', progressFn: d => ({ current: d.books.length, max: 25 }) },
+  { id: 'books_done_10', name: '十冊の足跡', desc: '本を10冊読了', progressFn: d => ({ current: doneBooks(d), max: 10 }) },
+  { id: 'isbn_10', name: '精密な目録係', desc: 'ISBN付きの本を10冊登録', progressFn: d => ({ current: isbnBooks(d), max: 10 }) },
+  { id: 'quiz_50', name: '問いの熟練者', desc: '問いに50回回答', progressFn: d => ({ current: d.quizCount || 0, max: 50 }) },
+  { id: 'answer_note_30', name: '思索ノート一冊分', desc: '問いへの回答メモを30件保存', progressFn: d => ({ current: quizAnswerCount(d), max: 30 }) },
+  { id: 'daily_30', name: '半刻の集中', desc: '1日に30分以上読書', progressFn: d => ({ current: maxDailyMinutes(d), max: 30 }) },
+  { id: 'daily_goal_3', name: '目標達成の三日月', desc: '1日の目標時間を3日達成', progressFn: d => ({ current: dailyGoalDays(d), max: 3 }) },
+  { id: 'manual_1', name: 'あとから記録', desc: '手入力で学習時間を1回記録', progressFn: d => ({ current: manualSessionCount(d), max: 1 }) },
+  { id: 'tiny_5', name: '一ページの連鎖', desc: '1ページモードを5回完了', progressFn: d => ({ current: d.tinyCount || 0, max: 5 }) },
+  { id: 'book_variety_3', name: '三冊を渡る読者', desc: '3冊以上の本でセッションを記録', progressFn: d => ({ current: bookVariety(d), max: 3 }) },
+  { id: 'genre_variety_3', name: '三分野の窓', desc: '3ジャンル以上でセッションを記録', progressFn: d => ({ current: genreVariety(d), max: 3 }) },
+  { id: 'session_memo_5', name: '収穫の余白', desc: 'セッションメモを5件保存', progressFn: d => ({ current: memoCount(d), max: 5 }) },
+  { id: 'weekly_sessions_3', name: 'ウィークリーミッション: 3回通う', desc: '直近7日で3セッション', progressFn: d => ({ current: sessionsSinceDays(d, 7).length, max: 3 }) },
+  { id: 'weekly_minutes_180', name: 'ウィークリーミッション: 180分', desc: '直近7日で180分読書', progressFn: d => ({ current: minutesSinceDays(d, 7), max: 180 }) },
+  { id: 'weekly_active_days_5', name: 'ウィークリーミッション: 5日点灯', desc: '直近7日で5日読書', progressFn: d => ({ current: activeDaysSinceDays(d, 7), max: 5 }) },
+  { id: 'weekly_quiz_3', name: 'ウィークリーミッション: 問い3つ', desc: '直近7日で問いに3回回答', progressFn: d => ({ current: quizAnswersSinceDays(d, 7), max: 3 }) },
+  { id: 'monthly_sessions_12', name: 'マンスリーミッション: 12回通う', desc: '直近30日で12セッション', progressFn: d => ({ current: sessionsSinceDays(d, 30).length, max: 12 }) },
+  { id: 'monthly_minutes_600', name: 'マンスリーミッション: 600分', desc: '直近30日で600分読書', progressFn: d => ({ current: minutesSinceDays(d, 30), max: 600 }) },
 ];
 
 function badgeProgress(badge, d) {
@@ -2885,6 +2969,28 @@ function addManualSession() {
   updateHome();
 }
 
+function cancelSession() {
+  const hasActiveSession = !!sessionStart || !!readActiveSession();
+  if (!hasActiveSession) {
+    initSessionSetup();
+    return;
+  }
+  if (!confirm('このセッションを記録せずに中止しますか？')) return;
+
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  sessionStart = null;
+  currentPreNote = '';
+  isTinySession = false;
+  clearActiveSession();
+  clearTinyBannerTimer();
+  setTinyBannerVisible(false);
+  document.getElementById('timer-display').textContent = '00:00';
+  document.getElementById('session-running').style.display = 'none';
+  document.getElementById('session-result').style.display = 'none';
+  initSessionSetup();
+}
+
 function endSession() {
   const activeSession = saveActiveSession();
   if (timerInterval) clearInterval(timerInterval);
@@ -3272,7 +3378,15 @@ function answerQuiz(type) {
 }
 
 // ==================== 実績 ====================
+function setAchievementView(view) {
+  achievementView = view === 'earned' ? 'earned' : 'pending';
+  updateAchievements();
+}
+
 function updateAchievements() {
+  const unlockedNow = checkBadges();
+  if (unlockedNow.length > 0) DB.save(data);
+
   const lvl = getLevel(data.xp);
   const levelRank = getLevelIndex(data.xp);
   const next = getNextLevel(data.xp);
@@ -3288,16 +3402,36 @@ function updateAchievements() {
 
   const grid = document.getElementById('badge-grid');
   grid.innerHTML = '';
-  const earnedCount = BADGES.filter(badge => data.earnedBadges.includes(badge.id)).length;
+  const earnedBadges = BADGES.filter(badge => data.earnedBadges.includes(badge.id));
+  const pendingBadges = BADGES.filter(badge => !data.earnedBadges.includes(badge.id));
+  const earnedCount = earnedBadges.length;
+  const visibleBadges = achievementView === 'earned' ? earnedBadges : pendingBadges;
+  const listTitle = document.getElementById('badge-list-title');
+  if (listTitle) listTitle.textContent = achievementView === 'earned' ? '獲得済みの実績' : '未獲得の実績';
   document.getElementById('badge-summary').innerHTML = `<strong>${earnedCount}</strong> / ${BADGES.length} 個の実績を獲得中`;
+  const pendingBtn = document.getElementById('badge-view-pending');
+  const earnedBtn = document.getElementById('badge-view-earned');
+  if (pendingBtn && earnedBtn) {
+    pendingBtn.classList.toggle('btn-outline', achievementView !== 'pending');
+    earnedBtn.classList.toggle('btn-outline', achievementView !== 'earned');
+  }
   let nextBadgeHint = null;
-  BADGES.forEach(badge => {
+  pendingBadges.forEach(badge => {
+    if (!nextBadgeHint && badge.progressFn) {
+      const { current, max } = badgeProgress(badge, data);
+      nextBadgeHint = { badge, current, max, pct: Math.min(100, Math.round(current / max * 100)) };
+    }
+  });
+
+  if (visibleBadges.length === 0) {
+    grid.innerHTML = `<div class="badge-empty">${achievementView === 'earned' ? 'まだ獲得済みの実績はありません。' : '未獲得の実績はありません。すべて獲得済みです。'}</div>`;
+  }
+  visibleBadges.forEach(badge => {
     const earned = data.earnedBadges.includes(badge.id);
     let progressHtml = '';
     if (!earned && badge.progressFn) {
       const { current, max } = badgeProgress(badge, data);
       const pct = Math.min(100, Math.round(current / max * 100));
-      if (!nextBadgeHint) nextBadgeHint = { badge, current, max, pct };
       progressHtml = `
         <div class="xp-bar-wrap" style="height:4px; margin-top:0.4rem;">
           <div class="xp-bar" style="width:${pct}%"></div>
