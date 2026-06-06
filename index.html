@@ -1653,6 +1653,7 @@ nav button {
         <button class="goal-chip active" data-goal="60" onclick="setDailyGoal(60)">60<span>分</span></button>
         <button class="goal-chip" data-goal="120" onclick="setDailyGoal(120)">120<span>分</span></button>
         <button class="goal-chip" data-goal="180" onclick="setDailyGoal(180)">180<span>分</span></button>
+        <button class="goal-chip" data-goal="300" onclick="setDailyGoal(300)">300<span>分</span></button>
       </div>
     </section>
 
@@ -2272,7 +2273,7 @@ function updateHome() {
   const today2 = new Date().toDateString();
   const todaySessions = data.sessions.filter(s => new Date(s.date).toDateString() === today2);
   const todayMinutes = todaySessions.reduce((sum, s) => sum + s.minutes, 0);
-  const allowedGoals = [15, 30, 60, 120, 180];
+  const allowedGoals = [15, 30, 60, 120, 180, 300];
   const goal = allowedGoals.includes(data.dailyGoalMinutes) ? data.dailyGoalMinutes : 60;
   data.dailyGoalMinutes = goal;
   const rawProg = Math.round((todayMinutes / goal) * 100);
