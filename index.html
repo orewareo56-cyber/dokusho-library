@@ -1801,6 +1801,7 @@ nav button {
     </div>
     <div class="flex session-actions mt2">
       <button class="btn btn-danger" onclick="endSession()">終了して記録する</button>
+      <button class="btn btn-outline" id="pause-session-btn" onclick="togglePauseSession()">一時停止する</button>
       <button class="btn btn-outline" onclick="cancelSession()">記録せず中止する</button>
     </div>
   </div>
@@ -1961,6 +1962,9 @@ if (!Array.isArray(data.earnedBadges)) data.earnedBadges = [];
 const ACTIVE_SESSION_KEY = 'dokusho_active_session';
 let timerInterval = null;
 let sessionStart = null;
+let sessionPaused = false;
+let pauseStarted = null;
+let pausedTotal = 0;
 let achievementView = 'pending';
 let currentBookFilter = 'all';
 let editingBookId = null;
@@ -2725,11 +2729,11 @@ function clearTinyBannerTimer() {
 
 function scheduleTinyBanner(startAt, forceVisible = false) {
   clearTinyBannerTimer();
-  if (!isTinySession || !startAt) {
+  if (!isTinySession || !startAt || sessionPaused) {
     setTinyBannerVisible(false);
     return;
   }
-  const remaining = 60000 - (Date.now() - startAt);
+  const remaining = 60000 - getSessionElapsedSeconds() * 1000;
   if (forceVisible || remaining <= 0) {
     setTinyBannerVisible(true);
     return;
@@ -2741,10 +2745,34 @@ function scheduleTinyBanner(startAt, forceVisible = false) {
   }, remaining);
 }
 
+function setTimerTargetText(baseText) {
+  const targetEl = document.getElementById('timer-target');
+  if (!targetEl) return;
+  targetEl.dataset.baseText = baseText;
+  targetEl.textContent = sessionPaused ? `${baseText} ／ 一時停止中` : baseText;
+}
+
+function updatePauseButton() {
+  const btn = document.getElementById('pause-session-btn');
+  if (!btn) return;
+  btn.textContent = sessionPaused ? '再開する' : '一時停止する';
+}
+
+function getSessionElapsedSeconds(sessionState = null) {
+  const startAt = sessionState?.start ?? sessionStart;
+  if (!startAt) return 0;
+  const totalPaused = Math.max(0, sessionState?.pausedTotal ?? pausedTotal ?? 0);
+  const isPaused = sessionState?.paused ?? sessionPaused;
+  const pausedAt = sessionState?.pauseStarted ?? pauseStarted;
+  const livePaused = isPaused && pausedAt ? Date.now() - pausedAt : 0;
+  return Math.max(0, Math.floor((Date.now() - startAt - totalPaused - livePaused) / 1000));
+}
+
 function restartTimerInterval() {
   if (timerInterval) clearInterval(timerInterval);
   updateTimer();
-  timerInterval = setInterval(updateTimer, 1000);
+  updatePauseButton();
+  timerInterval = sessionPaused ? null : setInterval(updateTimer, 1000);
 }
 
 function readActiveSession() {
@@ -2780,9 +2808,9 @@ function renderActiveSession(sessionState, notice = '') {
   document.getElementById('session-result').style.display = 'none';
   document.getElementById('session-running').style.display = 'block';
   document.getElementById('session-book-name').textContent = sessionState.bookName || '（本未選択）';
-  document.getElementById('timer-target').textContent = sessionState.isTiny
+  setTimerTargetText(sessionState.isTiny
     ? '1ページモード — マイペースでOK'
-    : `目標: ${sessionState.targetMinutes}分`;
+    : `目標: ${sessionState.targetMinutes}分`);
   applyQuoteState(
     notice || sessionState.quote || '静かにページを開きましょう。',
     notice ? true : !!sessionState.quoteHighlighted
@@ -2795,6 +2823,7 @@ function saveActiveSession(overrides = {}) {
   if (!sessionStart) return null;
   const { bookId, bookName } = getCurrentBookSelection();
   const quoteState = getCurrentQuoteState();
+  const hasOverride = key => Object.prototype.hasOwnProperty.call(overrides, key);
   const snapshot = {
     start: sessionStart,
     bookId: overrides.bookId ?? bookId,
@@ -2805,6 +2834,9 @@ function saveActiveSession(overrides = {}) {
     quote: overrides.quote ?? quoteState.text,
     quoteHighlighted: overrides.quoteHighlighted ?? quoteState.highlighted,
     tinyBannerShown: overrides.tinyBannerShown ?? (document.getElementById('tiny-banner')?.style.display === 'flex'),
+    paused: hasOverride('paused') ? overrides.paused : sessionPaused,
+    pauseStarted: hasOverride('pauseStarted') ? overrides.pauseStarted : pauseStarted,
+    pausedTotal: hasOverride('pausedTotal') ? overrides.pausedTotal : pausedTotal,
   };
   localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(snapshot));
   return snapshot;
@@ -2821,6 +2853,9 @@ function restoreActiveSession(options = {}) {
   initSessionSetup();
   sessionStart = s.start;
   isTinySession = !!s.isTiny;
+  sessionPaused = !!s.paused;
+  pauseStarted = sessionPaused ? (s.pauseStarted || Date.now()) : null;
+  pausedTotal = Math.max(0, parseInt(s.pausedTotal || 0, 10));
   currentPreNote = s.preNote || '';
   renderActiveSession(
     s,
@@ -2834,6 +2869,9 @@ function restoreActiveSession(options = {}) {
 function startSession() {
   if (timerInterval) clearInterval(timerInterval);
   isTinySession = false;
+  sessionPaused = false;
+  pauseStarted = null;
+  pausedTotal = 0;
   currentPreNote = document.getElementById('session-pre-note')?.value || '';
   const bookSel = document.getElementById('session-book-select');
   const bookId = bookSel.value;
@@ -2843,7 +2881,7 @@ function startSession() {
   const bookName = bookId ? bookSel.selectedOptions[0].textContent : '（本未選択）';
   document.getElementById('session-book-name').textContent = bookName;
   const target = parseInt(document.getElementById('target-minutes').value);
-  document.getElementById('timer-target').textContent = `目標: ${target}分`;
+  setTimerTargetText(`目標: ${target}分`);
   // サプライズ名言（30%の確率）
   const useSurprise = Math.random() < 0.3;
   const quotePool = useSurprise ? SURPRISE_QUOTES : QUOTES;
@@ -2857,6 +2895,9 @@ function startSession() {
 function startTinySession() {
   if (timerInterval) clearInterval(timerInterval);
   isTinySession = true;
+  sessionPaused = false;
+  pauseStarted = null;
+  pausedTotal = 0;
   currentPreNote = '';
   // 直前に使った本を自動選択
   showScreen('session');
@@ -2875,7 +2916,7 @@ function startTinySession() {
     const bookName = sel.value && sel.selectedOptions[0].value
       ? sel.selectedOptions[0].textContent : '（本未選択）';
     document.getElementById('session-book-name').textContent = bookName;
-    document.getElementById('timer-target').textContent = '1ページモード — マイペースでOK';
+    setTimerTargetText('1ページモード — マイペースでOK');
     applyQuoteState(QUOTES[Math.floor(Math.random() * QUOTES.length)], false);
     clearTinyBannerTimer();
     setTinyBannerVisible(false);
@@ -2891,9 +2932,37 @@ function continueTiny() {
   saveActiveSession({ isTiny: false, tinyBannerShown: false });
 }
 
+function togglePauseSession() {
+  if (!sessionStart) return;
+
+  if (sessionPaused) {
+    pausedTotal += pauseStarted ? Date.now() - pauseStarted : 0;
+    sessionPaused = false;
+    pauseStarted = null;
+    saveActiveSession({ paused: false, pauseStarted: null, pausedTotal, tinyBannerShown: false });
+    restartTimerInterval();
+    scheduleTinyBanner(sessionStart, false);
+    const baseText = document.getElementById('timer-target')?.dataset.baseText;
+    if (baseText) setTimerTargetText(baseText);
+    return;
+  }
+
+  sessionPaused = true;
+  pauseStarted = Date.now();
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  clearTinyBannerTimer();
+  setTinyBannerVisible(false);
+  updateTimer();
+  updatePauseButton();
+  const baseText = document.getElementById('timer-target')?.dataset.baseText;
+  if (baseText) setTimerTargetText(baseText);
+  saveActiveSession({ paused: true, pauseStarted, pausedTotal, tinyBannerShown: false });
+}
+
 function updateTimer() {
   if (!sessionStart) return;
-  const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+  const elapsed = getSessionElapsedSeconds();
   const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
   const s = String(elapsed % 60).padStart(2, '0');
   document.getElementById('timer-display').textContent = `${m}:${s}`;
@@ -2981,6 +3050,9 @@ function cancelSession() {
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = null;
   sessionStart = null;
+  sessionPaused = false;
+  pauseStarted = null;
+  pausedTotal = 0;
   currentPreNote = '';
   isTinySession = false;
   clearActiveSession();
@@ -2998,7 +3070,7 @@ function endSession() {
   timerInterval = null;
   clearActiveSession();
   const startAt = activeSession?.start || sessionStart || Date.now();
-  const elapsed = Math.floor((Date.now() - startAt) / 1000);
+  const elapsed = getSessionElapsedSeconds(activeSession || { start: startAt });
   const minutes = Math.max(1, Math.floor(elapsed / 60));
   const wasTinySession = activeSession?.isTiny ?? isTinySession;
   currentPreNote = activeSession?.preNote || currentPreNote;
@@ -3013,6 +3085,9 @@ function endSession() {
   setTinyBannerVisible(false);
   clearTinyBannerTimer();
   sessionStart = null;
+  sessionPaused = false;
+  pauseStarted = null;
+  pausedTotal = 0;
 
   // セッション記録
   const session = {
@@ -3123,6 +3198,9 @@ function resetSession() {
   document.getElementById('result-badges').style.display = 'none';
   sessionStart = null;
   timerInterval = null;
+  sessionPaused = false;
+  pauseStarted = null;
+  pausedTotal = 0;
   isTinySession = false;
   currentPreNote = '';
   clearTinyBannerTimer();
