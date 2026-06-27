@@ -480,6 +480,89 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
   justify-content: center;
   flex-wrap: wrap;
 }
+.session-mode-toggle {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.session-mode-toggle .btn {
+  min-height: 44px;
+}
+.session-mode-toggle .btn.active {
+  background: linear-gradient(180deg, rgba(26, 151, 139, 0.94), rgba(5, 103, 99, 0.95));
+  border-color: rgba(245, 209, 123, 0.65);
+  color: #ffe7a6;
+}
+.celebration-overlay {
+  align-items: center;
+  background: rgba(6, 4, 3, 0.58);
+  backdrop-filter: blur(8px);
+  display: none;
+  inset: 0;
+  justify-content: center;
+  padding: 1.2rem;
+  position: fixed;
+  z-index: 2000;
+}
+.celebration-overlay.show {
+  display: flex;
+}
+.celebration-card {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(245, 209, 123, 0.34), transparent 38%),
+    linear-gradient(180deg, rgba(31, 23, 13, 0.96), rgba(9, 7, 5, 0.98));
+  border: 1px solid rgba(245, 209, 123, 0.62);
+  border-radius: 8px;
+  box-shadow: 0 28px 80px rgba(0,0,0,0.54), 0 0 34px rgba(232, 160, 32, 0.22);
+  max-width: 420px;
+  overflow: hidden;
+  padding: 1.4rem;
+  position: relative;
+  text-align: center;
+  width: min(100%, 420px);
+}
+.celebration-overlay.show .celebration-card {
+  animation: celebrationPop 0.62s cubic-bezier(.2, 1.4, .38, 1);
+}
+.celebration-card::before {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.36), transparent);
+  content: "";
+  height: 100%;
+  left: -70%;
+  position: absolute;
+  top: 0;
+  transform: skewX(-18deg);
+  width: 44%;
+}
+.celebration-overlay.show .celebration-card::before {
+  animation: celebrationShine 1.05s ease 0.12s;
+}
+.celebration-kicker {
+  color: #75e0cf;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  margin-bottom: 0.5rem;
+}
+.celebration-title {
+  color: #f5d98b;
+  font-size: 1.6rem;
+  line-height: 1.35;
+  margin: 0;
+}
+.celebration-body {
+  color: var(--text2);
+  line-height: 1.7;
+  margin-top: 0.65rem;
+}
+@keyframes celebrationPop {
+  0% { opacity: 0; transform: translateY(16px) scale(0.86); }
+  58% { opacity: 1; transform: translateY(-4px) scale(1.03); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes celebrationShine {
+  0% { left: -70%; }
+  100% { left: 130%; }
+}
 .level-title {
   color: var(--accent2);
   display: inline-block;
@@ -1753,7 +1836,14 @@ nav button {
 
   <div id="session-setup">
     <div class="card">
-      <h2>読む本を選ぶ</h2>
+      <h2>セッション種別</h2>
+      <div class="session-mode-toggle">
+        <button class="btn active" id="session-mode-reading" onclick="setSessionMode('reading')">読書</button>
+        <button class="btn btn-outline" id="session-mode-creative" onclick="setSessionMode('creative')">クリエイティブ作業</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2 id="session-book-heading">読む本を選ぶ</h2>
       <select id="session-book-select">
         <option value="">-- 本を選んでください --</option>
       </select>
@@ -1783,9 +1873,25 @@ nav button {
         placeholder="例：ケプラーの方法論はなぜ説得力を持ったのか？（書かなくてもOK）" style="resize:none;"></textarea>
       <p class="text-sm">書くと収穫カードに今日の問いが残ります</p>
     </div>
+    <div class="card" id="creative-session-card" style="display:none;">
+      <h2>制作テーマ</h2>
+      <label for="creative-work-type">作業の種類</label>
+      <select id="creative-work-type">
+        <option value="game">ゲーム構想</option>
+        <option value="prototype">プロトタイプ</option>
+        <option value="scenario">シナリオ</option>
+        <option value="world">世界観・設定</option>
+        <option value="art">ビジュアル・素材</option>
+        <option value="other">その他</option>
+      </select>
+      <label for="creative-session-note">今日つくるもの（任意）</label>
+      <textarea id="creative-session-note" maxlength="140" rows="3"
+        placeholder="例：読んだ章の発想から、探索ゲームのコアループを組む" style="resize:none;"></textarea>
+      <p class="text-sm">読書から生まれたアイデアや、試作したい作品の方向を残せます</p>
+    </div>
     <div class="text-center mt2">
       <button class="btn" style="font-size:1.1rem; padding:1rem 2.5rem;" onclick="startSession()">
-        セッション開始
+        <span id="session-start-label">セッション開始</span>
       </button>
     </div>
   </div>
@@ -1809,7 +1915,7 @@ nav button {
   <div id="session-result" style="display:none;">
     <div class="card animate-in text-center">
       <div class="result-mark">了</div>
-      <h2>読書セッション完了！</h2>
+      <h2 id="result-title">読書セッション完了！</h2>
       <div class="mt1" id="result-time"></div>
     </div>
     <div class="card animate-in">
@@ -1929,6 +2035,14 @@ nav button {
 
 </main>
 
+<div class="celebration-overlay" id="celebration-overlay" onclick="dismissCelebration()">
+  <div class="celebration-card">
+    <div class="celebration-kicker" id="celebration-kicker">実績獲得</div>
+    <h2 class="celebration-title" id="celebration-title">新しい実績</h2>
+    <div class="celebration-body" id="celebration-body"></div>
+  </div>
+</div>
+
 <script>
 // ==================== データ管理 ====================
 const DB = {
@@ -1949,13 +2063,14 @@ const DB = {
       streakHistory: {},
       tinyCount: 0,
       quizAnswers: [],
+      creativeMinutes: 0,
     };
   },
   save(data) { localStorage.setItem('dokusho_data', JSON.stringify(data)); }
 };
 
 // 既存データに新フィールドを安全にマージ
-const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [] };
+const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0 };
 let data = Object.assign({}, _defaults, DB.load());
 if (!Array.isArray(data.quizAnswers)) data.quizAnswers = [];
 if (!Array.isArray(data.earnedBadges)) data.earnedBadges = [];
@@ -1965,6 +2080,7 @@ let sessionStart = null;
 let sessionPaused = false;
 let pauseStarted = null;
 let pausedTotal = 0;
+let sessionMode = 'reading';
 let achievementView = 'pending';
 let currentBookFilter = 'all';
 let editingBookId = null;
@@ -2076,6 +2192,31 @@ function genreVariety(d) {
 function memoCount(d) {
   return d.sessions.filter(s => s.memo && String(s.memo).trim()).length;
 }
+function isCreativeSession(s) {
+  return s.type === 'creative';
+}
+function creativeSessions(d) {
+  return d.sessions.filter(isCreativeSession);
+}
+function creativeMinutes(d) {
+  return creativeSessions(d).reduce((sum, s) => sum + (s.minutes || 0), 0);
+}
+function creativeSessionsSinceDays(d, days) {
+  const cutoff = sinceTimestamp(days);
+  return creativeSessions(d).filter(s => new Date(s.date).getTime() >= cutoff);
+}
+function creativeMinutesSinceDays(d, days) {
+  return creativeSessionsSinceDays(d, days).reduce((sum, s) => sum + (s.minutes || 0), 0);
+}
+function creativeTypeCount(d, type) {
+  return creativeSessions(d).filter(s => s.creativeType === type).length;
+}
+function creativeSourceBooks(d) {
+  return new Set(creativeSessions(d).map(s => s.bookId).filter(Boolean)).size;
+}
+function creativeNoteCount(d) {
+  return creativeSessions(d).filter(s => s.creativeNote && String(s.creativeNote).trim()).length;
+}
 
 const BADGES = [
   { id: 'first_session', name: '初入館', desc: '初めてのセッション完了', progressFn: d => ({ current: d.sessions.length, max: 1 }) },
@@ -2107,7 +2248,7 @@ const BADGES = [
   { id: 'level_sage', name: '書架の賢者', desc: 'レベル「書架の賢者」に到達', progressFn: d => ({ current: d.xp, max: 700 }) },
   { id: 'answer_note_1', name: '問いの書き込み', desc: '問いへの回答メモを1件保存', progressFn: d => ({ current: quizAnswerCount(d), max: 1 }) },
   { id: 'answer_note_10', name: '思索の束', desc: '問いへの回答メモを10件保存', progressFn: d => ({ current: quizAnswerCount(d), max: 10 }) },
-  { id: 'daily_120', name: '長机の午後', desc: '1日に120分以上読書', progressFn: d => ({ current: maxDailyMinutes(d), max: 120 }) },
+  { id: 'daily_120', name: '長机の午後', desc: '1日に120分以上読書・創作', progressFn: d => ({ current: maxDailyMinutes(d), max: 120 }) },
   { id: 'recovery_used', name: '途切れない灯', desc: 'リカバリー権を初めて使用', progressFn: d => ({ current: d.recoveryUsed ? 1 : 0, max: 1 }) },
   { id: 'session_100', name: '百回目の栞', desc: 'セッション100回達成', progressFn: d => ({ current: d.sessions.length, max: 100 }) },
   { id: 'time_3000', name: '三千分の書架', desc: '総読書時間3000分達成', progressFn: d => ({ current: d.totalMinutes, max: 3000 }) },
@@ -2116,7 +2257,7 @@ const BADGES = [
   { id: 'isbn_10', name: '精密な目録係', desc: 'ISBN付きの本を10冊登録', progressFn: d => ({ current: isbnBooks(d), max: 10 }) },
   { id: 'quiz_50', name: '問いの熟練者', desc: '問いに50回回答', progressFn: d => ({ current: d.quizCount || 0, max: 50 }) },
   { id: 'answer_note_30', name: '思索ノート一冊分', desc: '問いへの回答メモを30件保存', progressFn: d => ({ current: quizAnswerCount(d), max: 30 }) },
-  { id: 'daily_30', name: '半刻の集中', desc: '1日に30分以上読書', progressFn: d => ({ current: maxDailyMinutes(d), max: 30 }) },
+  { id: 'daily_30', name: '半刻の集中', desc: '1日に30分以上読書・創作', progressFn: d => ({ current: maxDailyMinutes(d), max: 30 }) },
   { id: 'daily_goal_3', name: '目標達成の三日月', desc: '1日の目標時間を3日達成', progressFn: d => ({ current: dailyGoalDays(d), max: 3 }) },
   { id: 'manual_1', name: 'あとから記録', desc: '手入力で学習時間を1回記録', progressFn: d => ({ current: manualSessionCount(d), max: 1 }) },
   { id: 'tiny_5', name: '一ページの連鎖', desc: '1ページモードを5回完了', progressFn: d => ({ current: d.tinyCount || 0, max: 5 }) },
@@ -2124,11 +2265,21 @@ const BADGES = [
   { id: 'genre_variety_3', name: '三分野の窓', desc: '3ジャンル以上でセッションを記録', progressFn: d => ({ current: genreVariety(d), max: 3 }) },
   { id: 'session_memo_5', name: '収穫の余白', desc: 'セッションメモを5件保存', progressFn: d => ({ current: memoCount(d), max: 5 }) },
   { id: 'weekly_sessions_3', name: 'ウィークリーミッション: 3回通う', desc: '直近7日で3セッション', progressFn: d => ({ current: sessionsSinceDays(d, 7).length, max: 3 }) },
-  { id: 'weekly_minutes_180', name: 'ウィークリーミッション: 180分', desc: '直近7日で180分読書', progressFn: d => ({ current: minutesSinceDays(d, 7), max: 180 }) },
+  { id: 'weekly_minutes_180', name: 'ウィークリーミッション: 180分', desc: '直近7日で読書・創作180分', progressFn: d => ({ current: minutesSinceDays(d, 7), max: 180 }) },
   { id: 'weekly_active_days_5', name: 'ウィークリーミッション: 5日点灯', desc: '直近7日で5日読書', progressFn: d => ({ current: activeDaysSinceDays(d, 7), max: 5 }) },
   { id: 'weekly_quiz_3', name: 'ウィークリーミッション: 問い3つ', desc: '直近7日で問いに3回回答', progressFn: d => ({ current: quizAnswersSinceDays(d, 7), max: 3 }) },
   { id: 'monthly_sessions_12', name: 'マンスリーミッション: 12回通う', desc: '直近30日で12セッション', progressFn: d => ({ current: sessionsSinceDays(d, 30).length, max: 12 }) },
-  { id: 'monthly_minutes_600', name: 'マンスリーミッション: 600分', desc: '直近30日で600分読書', progressFn: d => ({ current: minutesSinceDays(d, 30), max: 600 }) },
+  { id: 'monthly_minutes_600', name: 'マンスリーミッション: 600分', desc: '直近30日で読書・創作600分', progressFn: d => ({ current: minutesSinceDays(d, 30), max: 600 }) },
+  { id: 'creative_1', name: '最初の工房入り', desc: 'クリエイティブ作業セッションを1回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 1 }) },
+  { id: 'creative_5', name: '構想を編む手', desc: 'クリエイティブ作業セッションを5回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 5 }) },
+  { id: 'creative_20', name: '制作習慣の設計者', desc: 'クリエイティブ作業セッションを20回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 20 }) },
+  { id: 'creative_minutes_120', name: '二時間の試作', desc: '創作時間を合計120分記録', progressFn: d => ({ current: creativeMinutes(d), max: 120 }) },
+  { id: 'creative_minutes_600', name: '十時間の工房', desc: '創作時間を合計600分記録', progressFn: d => ({ current: creativeMinutes(d), max: 600 }) },
+  { id: 'creative_game_3', name: 'ゲーム構想家', desc: 'ゲーム構想セッションを3回完了', progressFn: d => ({ current: creativeTypeCount(d, 'game'), max: 3 }) },
+  { id: 'creative_source_3', name: '読書から作品へ', desc: '3冊以上をベースに創作セッションを記録', progressFn: d => ({ current: creativeSourceBooks(d), max: 3 }) },
+  { id: 'creative_note_5', name: '制作メモの束', desc: '創作メモ付きセッションを5回完了', progressFn: d => ({ current: creativeNoteCount(d), max: 5 }) },
+  { id: 'weekly_creative_180', name: 'ウィークリーミッション: 創作180分', desc: '直近7日で創作を180分記録', progressFn: d => ({ current: creativeMinutesSinceDays(d, 7), max: 180 }) },
+  { id: 'monthly_creative_600', name: 'マンスリーミッション: 創作600分', desc: '直近30日で創作を600分記録', progressFn: d => ({ current: creativeMinutesSinceDays(d, 30), max: 600 }) },
 ];
 
 function badgeProgress(badge, d) {
@@ -2150,6 +2301,68 @@ function checkBadges() {
     }
   });
   return newBadges;
+}
+
+let celebrationQueue = [];
+let celebrationTimer = null;
+let celebrationShowing = false;
+
+function queueCelebration(item) {
+  celebrationQueue.push(item);
+  if (!celebrationShowing) showNextCelebration();
+}
+
+function showNextCelebration() {
+  if (celebrationTimer) {
+    clearTimeout(celebrationTimer);
+    celebrationTimer = null;
+  }
+  const item = celebrationQueue.shift();
+  const overlay = document.getElementById('celebration-overlay');
+  if (!item || !overlay) {
+    celebrationShowing = false;
+    return;
+  }
+  celebrationShowing = true;
+  document.getElementById('celebration-kicker').textContent = item.kicker;
+  document.getElementById('celebration-title').textContent = item.title;
+  document.getElementById('celebration-body').textContent = item.body;
+  overlay.classList.remove('show');
+  void overlay.offsetWidth;
+  overlay.classList.add('show');
+  celebrationTimer = setTimeout(dismissCelebration, item.duration || 2600);
+}
+
+function dismissCelebration() {
+  const overlay = document.getElementById('celebration-overlay');
+  if (!overlay || !celebrationShowing) return;
+  overlay.classList.remove('show');
+  celebrationShowing = false;
+  celebrationTimer = setTimeout(showNextCelebration, 220);
+}
+
+function playProgressCelebration(newBadgeIds = [], previousXp = null) {
+  if (previousXp !== null && getLevelIndex(data.xp) > getLevelIndex(previousXp)) {
+    const lvl = getLevel(data.xp);
+    queueCelebration({
+      kicker: 'LEVEL UP',
+      title: lvl.name,
+      body: `レベルが上がりました。現在 ${data.xp} XP です。`,
+      duration: 2900,
+    });
+  }
+  if (newBadgeIds.length > 0) {
+    const badges = newBadgeIds.map(id => BADGES.find(b => b.id === id)).filter(Boolean);
+    const title = badges.length === 1 ? badges[0].name : `${badges.length}個の実績を獲得`;
+    const body = badges.length === 1
+      ? badges[0].desc
+      : badges.map(b => b.name).slice(0, 3).join(' / ');
+    queueCelebration({
+      kicker: '実績獲得',
+      title,
+      body,
+    });
+  }
 }
 
 // ==================== ナビゲーション ====================
@@ -2376,10 +2589,11 @@ function addBook() {
     addedAt: new Date().toISOString(),
   };
   data.books.unshift(book);
-  checkBadges();
+  const newBadges = checkBadges();
   DB.save(data);
   ['book-title','book-author','book-isbn'].forEach(id => document.getElementById(id).value = '');
   renderBookList();
+  playProgressCelebration(newBadges);
 }
 
 async function lookupBookByIsbn(isbnValue) {
@@ -2566,15 +2780,23 @@ function saveBookEdit(id) {
   book.status = document.getElementById(`edit-status-${id}`)?.value || 'tsundoku';
   book.isbn = document.getElementById(`edit-isbn-${id}`)?.value.trim() || '';
   editingBookId = null;
-  checkBadges();
+  const newBadges = checkBadges();
   DB.save(data);
   renderBookList();
   updateHome();
+  playProgressCelebration(newBadges);
 }
 
 function changeStatus(id, status) {
   const book = data.books.find(b => b.id === id);
-  if (book) { book.status = status; checkBadges(); DB.save(data); renderBookList(); updateHome(); }
+  if (book) {
+    book.status = status;
+    const newBadges = checkBadges();
+    DB.save(data);
+    renderBookList();
+    updateHome();
+    playProgressCelebration(newBadges);
+  }
 }
 
 function removeBook(id) {
@@ -2609,6 +2831,22 @@ const SURPRISE_QUOTES = [
   '一次史料を読め。要約を読むな。知識は圧縮されると歪む。',
 ];
 let currentPreNote = '';
+let currentCreativeNote = '';
+const CREATIVE_TYPE_LABELS = {
+  game: 'ゲーム構想',
+  prototype: 'プロトタイプ',
+  scenario: 'シナリオ',
+  world: '世界観・設定',
+  art: 'ビジュアル・素材',
+  other: 'その他',
+};
+const CREATIVE_QUOTES = [
+  '読んだ知識は、形にした瞬間から自分の素材になる。',
+  '今日は完成よりも、動く小さな核を作りましょう。',
+  'よい構想は、問いと制約のあいだで輪郭を持ち始めます。',
+  '読書で得た違和感は、作品のエンジンになります。',
+  '一行のメモ、一枚のラフ、ひとつのルール。それで工房は動き出します。',
+];
 let isTinySession = false;
 let tinyBannerTimeout = null;
 
@@ -2645,25 +2883,60 @@ const BRIEFINGS = {
   ],
 };
 
+function setSessionMode(mode) {
+  if (sessionStart) return;
+  sessionMode = mode === 'creative' ? 'creative' : 'reading';
+  initSessionSetup();
+}
+
+function updateSessionModeUI() {
+  const isCreative = sessionMode === 'creative';
+  const readingBtn = document.getElementById('session-mode-reading');
+  const creativeBtn = document.getElementById('session-mode-creative');
+  if (readingBtn && creativeBtn) {
+    readingBtn.classList.toggle('active', !isCreative);
+    readingBtn.classList.toggle('btn-outline', isCreative);
+    creativeBtn.classList.toggle('active', isCreative);
+    creativeBtn.classList.toggle('btn-outline', !isCreative);
+  }
+  const heading = document.getElementById('session-book-heading');
+  if (heading) heading.textContent = isCreative ? 'ベースにする本を選ぶ' : '読む本を選ぶ';
+  const creativeCard = document.getElementById('creative-session-card');
+  if (creativeCard) creativeCard.style.display = isCreative ? 'block' : 'none';
+  const noteEl = document.getElementById('session-pre-note');
+  if (noteEl) {
+    noteEl.closest('.card').style.display = isCreative ? 'none' : 'block';
+  }
+  const startLabel = document.getElementById('session-start-label');
+  if (startLabel) startLabel.textContent = isCreative ? '創作セッション開始' : 'セッション開始';
+}
+
 function initSessionSetup() {
   document.getElementById('session-setup').style.display = 'block';
   document.getElementById('session-running').style.display = 'none';
   document.getElementById('session-result').style.display = 'none';
+  updateSessionModeUI();
   const sel = document.getElementById('session-book-select');
-  sel.innerHTML = '<option value="">-- 読書中の本を選んでください --</option>';
-  data.books.filter(b => b.status === 'reading').forEach(b => {
+  const isCreative = sessionMode === 'creative';
+  sel.innerHTML = isCreative
+    ? '<option value="">-- ベースにする本を選んでください（任意） --</option>'
+    : '<option value="">-- 読書中の本を選んでください --</option>';
+  const selectableBooks = isCreative ? data.books : data.books.filter(b => b.status === 'reading');
+  selectableBooks.forEach(b => {
     const opt = document.createElement('option');
     opt.value = b.id; opt.textContent = b.title; opt.dataset.genre = b.genre;
     sel.appendChild(opt);
   });
   if (sel.options.length === 1) {
-    sel.innerHTML = '<option value="">読書中の本がありません</option>';
+    sel.innerHTML = isCreative
+      ? '<option value="">本棚に本がありません</option>'
+      : '<option value="">読書中の本がありません</option>';
   }
   sel.onchange = function() {
     const opt = this.selectedOptions[0];
     const genre = opt?.dataset.genre;
     const briefDiv = document.getElementById('session-briefing');
-    if (genre && BRIEFINGS[genre]) {
+    if (!isCreative && genre && BRIEFINGS[genre]) {
       const arr = BRIEFINGS[genre];
       document.getElementById('briefing-text').textContent = arr[Math.floor(Math.random() * arr.length)];
       briefDiv.style.display = 'block';
@@ -2788,6 +3061,8 @@ function readActiveSession() {
 }
 
 function applySessionStateToForm(sessionState) {
+  sessionMode = sessionState.mode === 'creative' ? 'creative' : 'reading';
+  updateSessionModeUI();
   const sel = document.getElementById('session-book-select');
   const bookId = sessionState.bookId ? String(sessionState.bookId) : '';
   if (sel) {
@@ -2800,6 +3075,10 @@ function applySessionStateToForm(sessionState) {
   document.getElementById('target-minutes-display').textContent = String(targetMinutes);
   const noteEl = document.getElementById('session-pre-note');
   if (noteEl) noteEl.value = sessionState.preNote || '';
+  const creativeTypeEl = document.getElementById('creative-work-type');
+  if (creativeTypeEl) creativeTypeEl.value = sessionState.creativeType || 'game';
+  const creativeNoteEl = document.getElementById('creative-session-note');
+  if (creativeNoteEl) creativeNoteEl.value = sessionState.creativeNote || '';
 }
 
 function renderActiveSession(sessionState, notice = '') {
@@ -2810,7 +3089,9 @@ function renderActiveSession(sessionState, notice = '') {
   document.getElementById('session-book-name').textContent = sessionState.bookName || '（本未選択）';
   setTimerTargetText(sessionState.isTiny
     ? '1ページモード — マイペースでOK'
-    : `目標: ${sessionState.targetMinutes}分`);
+    : sessionState.mode === 'creative'
+      ? `創作目標: ${sessionState.targetMinutes}分`
+      : `目標: ${sessionState.targetMinutes}分`);
   applyQuoteState(
     notice || sessionState.quote || '静かにページを開きましょう。',
     notice ? true : !!sessionState.quoteHighlighted
@@ -2824,13 +3105,23 @@ function saveActiveSession(overrides = {}) {
   const { bookId, bookName } = getCurrentBookSelection();
   const quoteState = getCurrentQuoteState();
   const hasOverride = key => Object.prototype.hasOwnProperty.call(overrides, key);
+  const snapshotMode = overrides.mode ?? sessionMode;
+  const snapshotCreativeType = overrides.creativeType ?? (document.getElementById('creative-work-type')?.value || 'game');
+  let snapshotBookName = overrides.bookName ?? bookName;
+  if (snapshotMode === 'creative' && !hasOverride('bookName')) {
+    const baseBookName = bookId ? bookName : 'ベース本未選択';
+    snapshotBookName = `${CREATIVE_TYPE_LABELS[snapshotCreativeType] || '創作'} ／ ${baseBookName}`;
+  }
   const snapshot = {
     start: sessionStart,
+    mode: snapshotMode,
     bookId: overrides.bookId ?? bookId,
-    bookName: overrides.bookName ?? bookName,
+    bookName: snapshotBookName,
     targetMinutes: overrides.targetMinutes ?? parseInt(document.getElementById('target-minutes')?.value || '30', 10),
     isTiny: overrides.isTiny ?? isTinySession,
     preNote: overrides.preNote ?? (document.getElementById('session-pre-note')?.value || currentPreNote),
+    creativeType: snapshotCreativeType,
+    creativeNote: overrides.creativeNote ?? (document.getElementById('creative-session-note')?.value || currentCreativeNote),
     quote: overrides.quote ?? quoteState.text,
     quoteHighlighted: overrides.quoteHighlighted ?? quoteState.highlighted,
     tinyBannerShown: overrides.tinyBannerShown ?? (document.getElementById('tiny-banner')?.style.display === 'flex'),
@@ -2850,6 +3141,7 @@ function restoreActiveSession(options = {}) {
   const s = readActiveSession();
   if (!s) return false;
   if (!options.skipScreenChange) activateScreen('session');
+  sessionMode = s.mode === 'creative' ? 'creative' : 'reading';
   initSessionSetup();
   sessionStart = s.start;
   isTinySession = !!s.isTiny;
@@ -2857,10 +3149,13 @@ function restoreActiveSession(options = {}) {
   pauseStarted = sessionPaused ? (s.pauseStarted || Date.now()) : null;
   pausedTotal = Math.max(0, parseInt(s.pausedTotal || 0, 10));
   currentPreNote = s.preNote || '';
+  currentCreativeNote = s.creativeNote || '';
   renderActiveSession(
     s,
     options.notice === undefined
-      ? '中断したセッションを再開しました。読書を続けてください。'
+      ? (sessionMode === 'creative'
+        ? '中断した創作セッションを再開しました。作業を続けてください。'
+        : '中断したセッションを再開しました。読書を続けてください。')
       : options.notice
   );
   return true;
@@ -2873,27 +3168,38 @@ function startSession() {
   pauseStarted = null;
   pausedTotal = 0;
   currentPreNote = document.getElementById('session-pre-note')?.value || '';
+  currentCreativeNote = document.getElementById('creative-session-note')?.value || '';
   const bookSel = document.getElementById('session-book-select');
   const bookId = bookSel.value;
+  const mode = sessionMode === 'creative' ? 'creative' : 'reading';
+  const creativeType = document.getElementById('creative-work-type')?.value || 'game';
   sessionStart = Date.now();
   document.getElementById('session-setup').style.display = 'none';
   document.getElementById('session-running').style.display = 'block';
-  const bookName = bookId ? bookSel.selectedOptions[0].textContent : '（本未選択）';
-  document.getElementById('session-book-name').textContent = bookName;
+  const bookName = bookId ? bookSel.selectedOptions[0].textContent : (mode === 'creative' ? 'ベース本未選択' : '（本未選択）');
+  const displayName = mode === 'creative'
+    ? `${CREATIVE_TYPE_LABELS[creativeType] || '創作'} ／ ${bookName}`
+    : bookName;
+  document.getElementById('session-book-name').textContent = displayName;
   const target = parseInt(document.getElementById('target-minutes').value);
-  setTimerTargetText(`目標: ${target}分`);
-  // サプライズ名言（30%の確率）
-  const useSurprise = Math.random() < 0.3;
-  const quotePool = useSurprise ? SURPRISE_QUOTES : QUOTES;
-  applyQuoteState(quotePool[Math.floor(Math.random() * quotePool.length)], useSurprise);
+  setTimerTargetText(mode === 'creative' ? `創作目標: ${target}分` : `目標: ${target}分`);
+  if (mode === 'creative') {
+    applyQuoteState(CREATIVE_QUOTES[Math.floor(Math.random() * CREATIVE_QUOTES.length)], true);
+  } else {
+    // サプライズ名言（30%の確率）
+    const useSurprise = Math.random() < 0.3;
+    const quotePool = useSurprise ? SURPRISE_QUOTES : QUOTES;
+    applyQuoteState(quotePool[Math.floor(Math.random() * quotePool.length)], useSurprise);
+  }
   clearTinyBannerTimer();
   setTinyBannerVisible(false);
-  saveActiveSession({ bookId, bookName, targetMinutes: target });
+  saveActiveSession({ mode, bookId, bookName: displayName, targetMinutes: target, creativeType, creativeNote: currentCreativeNote });
   restartTimerInterval();
 }
 
 function startTinySession() {
   if (timerInterval) clearInterval(timerInterval);
+  sessionMode = 'reading';
   isTinySession = true;
   sessionPaused = false;
   pauseStarted = null;
@@ -2997,6 +3303,7 @@ function addManualSession() {
   data.totalMinutes += minutes;
 
   const xpGained = Math.max(10, minutes * 2);
+  const previousXp = data.xp;
   data.xp += xpGained;
 
   const today = new Date().toDateString();
@@ -3021,6 +3328,7 @@ function addManualSession() {
   document.getElementById('session-setup').style.display = 'none';
   document.getElementById('session-running').style.display = 'none';
   document.getElementById('session-result').style.display = 'block';
+  document.getElementById('result-title').textContent = '学習時間を記録しました';
   document.getElementById('result-time').innerHTML = `<span style="font-size:1.8rem; color:var(--accent2);">${minutes}分</span> 学習を記録しました`;
   const preNoteHtml = preNote
     ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">今日の問い: ${escapeHtml(preNote)}</div>` : '';
@@ -3037,6 +3345,7 @@ function addManualSession() {
     if (badge) cont.innerHTML += `<div class="badge-item earned"><div class="badge-name">${badge.name}</div></div>`;
   });
   updateHome();
+  playProgressCelebration(newBadges, previousXp);
 }
 
 function cancelSession() {
@@ -3054,6 +3363,7 @@ function cancelSession() {
   pauseStarted = null;
   pausedTotal = 0;
   currentPreNote = '';
+  currentCreativeNote = '';
   isTinySession = false;
   clearActiveSession();
   clearTinyBannerTimer();
@@ -3073,7 +3383,9 @@ function endSession() {
   const elapsed = getSessionElapsedSeconds(activeSession || { start: startAt });
   const minutes = Math.max(1, Math.floor(elapsed / 60));
   const wasTinySession = activeSession?.isTiny ?? isTinySession;
+  const mode = activeSession?.mode === 'creative' ? 'creative' : 'reading';
   currentPreNote = activeSession?.preNote || currentPreNote;
+  currentCreativeNote = activeSession?.creativeNote || currentCreativeNote;
   isTinySession = wasTinySession;
 
   // 本情報取得
@@ -3091,18 +3403,25 @@ function endSession() {
 
   // セッション記録
   const session = {
-    date: new Date().toISOString(), minutes, bookId, genre,
+    date: new Date().toISOString(), minutes, bookId, genre, type: mode,
     targetMinutes: activeSession?.targetMinutes || parseInt(document.getElementById('target-minutes')?.value||'30', 10),
     preNote: currentPreNote, isTiny: isTinySession,
+    creativeType: mode === 'creative' ? (activeSession?.creativeType || 'game') : undefined,
+    creativeNote: mode === 'creative' ? currentCreativeNote : undefined,
   };
   data.sessions.push(session);
-  data.totalMinutes += minutes;
+  if (mode === 'creative') {
+    data.creativeMinutes = (data.creativeMinutes || 0) + minutes;
+  } else {
+    data.totalMinutes += minutes;
+  }
 
   // 1ページモードカウント
   if (wasTinySession) data.tinyCount = (data.tinyCount||0) + 1;
 
   // XP計算（1分=2XP、最低10XP）
   const xpGained = Math.max(10, minutes * 2);
+  const previousXp = data.xp;
   data.xp += xpGained;
 
   // ストリーク計算
@@ -3129,6 +3448,7 @@ function endSession() {
   // バッジチェック
   const newBadges = checkBadges();
   DB.save(data);
+  updateHome();
 
   // 結果画面
   document.getElementById('session-running').style.display = 'none';
@@ -3136,7 +3456,8 @@ function endSession() {
 
   const m2 = String(Math.floor(elapsed / 60)).padStart(2, '0');
   const s2 = String(elapsed % 60).padStart(2, '0');
-  document.getElementById('result-time').innerHTML = `<span style="font-size:1.8rem; color:var(--accent2);">${m2}:${s2}</span> 読書しました`;
+  document.getElementById('result-title').textContent = mode === 'creative' ? '創作セッション完了！' : '読書セッション完了！';
+  document.getElementById('result-time').innerHTML = `<span style="font-size:1.8rem; color:var(--accent2);">${m2}:${s2}</span> ${mode === 'creative' ? '創作しました' : '読書しました'}`;
 
   // 収穫カード
   const harvests = {
@@ -3147,11 +3468,25 @@ function endSession() {
     '小説': ['登場人物の動機の複雑さに触れました', '創作のヒントになる設定を発見しました', '物語の構造から学びました'],
     'その他': ['今日も一歩前進しました', '知識の種を蒔きました', '継続が力になっています'],
   };
-  const harvestArr = harvests[genre] || harvests['その他'];
-  const harvestMsg = harvestArr.map(h => `<div style="margin-bottom:0.5rem;">• ${h}</div>`).join('');
-  const preNoteHtml = currentPreNote
-    ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">今日の問い: ${currentPreNote}</div>` : '';
-  document.getElementById('result-card').innerHTML = preNoteHtml + harvestMsg;
+  let resultCardHtml = '';
+  if (mode === 'creative') {
+    const creativeLabel = CREATIVE_TYPE_LABELS[session.creativeType] || '創作';
+    const creativeHarvests = [
+      '読書で得た素材を作品の形へ変換しました',
+      'アイデアを手で扱える制作単位まで近づけました',
+      '構想・試作・表現のいずれかを一歩進めました',
+    ];
+    const noteHtml = currentCreativeNote
+      ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">制作メモ: ${escapeHtml(currentCreativeNote)}</div>` : '';
+    resultCardHtml = `<div style="margin-bottom:0.5rem;">• 作業種別: ${escapeHtml(creativeLabel)}</div>` + noteHtml + creativeHarvests.map(h => `<div style="margin-bottom:0.5rem;">• ${h}</div>`).join('');
+  } else {
+    const harvestArr = harvests[genre] || harvests['その他'];
+    const harvestMsg = harvestArr.map(h => `<div style="margin-bottom:0.5rem;">• ${h}</div>`).join('');
+    const preNoteHtml = currentPreNote
+      ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">今日の問い: ${escapeHtml(currentPreNote)}</div>` : '';
+    resultCardHtml = preNoteHtml + harvestMsg;
+  }
+  document.getElementById('result-card').innerHTML = resultCardHtml;
 
   document.getElementById('result-xp').innerHTML = `+${xpGained} XP <span style="font-size:1rem; color:var(--text2);">(合計: ${data.xp} XP)</span>`;
 
@@ -3178,7 +3513,15 @@ function endSession() {
     'その他': ['今日の読書で最も印象に残ったことは何ですか？', 'この本の内容を一言で説明するとしたら？', '次に読む本をこの本から連鎖させるとしたら、どんなテーマの本を探しますか？'],
   };
   const qArr = questions[genre] || questions['その他'];
-  document.getElementById('result-question').textContent = qArr[Math.floor(Math.random() * qArr.length)];
+  const creativeQuestions = [
+    '今日の制作で、次に一番小さく試せる要素は何ですか？',
+    '読んだ内容から、作品のルール・場面・感情に変換できるものは何ですか？',
+    'この構想をゲームや作品として動かすなら、最初の30秒で何を体験させますか？',
+  ];
+  document.getElementById('result-question').textContent = mode === 'creative'
+    ? creativeQuestions[Math.floor(Math.random() * creativeQuestions.length)]
+    : qArr[Math.floor(Math.random() * qArr.length)];
+  playProgressCelebration(newBadges, previousXp);
 }
 
 function saveMemo() {
@@ -3203,6 +3546,7 @@ function resetSession() {
   pausedTotal = 0;
   isTinySession = false;
   currentPreNote = '';
+  currentCreativeNote = '';
   clearTinyBannerTimer();
   setTinyBannerVisible(false);
   showScreen('home');
@@ -3446,14 +3790,16 @@ function answerQuiz(type) {
     rating: type,
     xp,
   });
+  const previousXp = data.xp;
   data.xp += xp;
   data.quizCount = (data.quizCount || 0) + 1;
-  checkBadges();
+  const newBadges = checkBadges();
   DB.save(data);
   document.getElementById('quiz-answer-section').style.display = 'none';
   document.getElementById('quiz-xp-result').style.display = 'block';
   document.getElementById('quiz-xp-display').textContent = `${msg} 回答を保存しました。+${xp} XP`;
   renderQuizAnswerHistory();
+  playProgressCelebration(newBadges, previousXp);
 }
 
 // ==================== 実績 ====================
