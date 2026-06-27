@@ -1895,12 +1895,13 @@ nav button {
       <label for="learning-genre-select">ジャンルを選ぶ</label>
       <select id="learning-genre-select"></select>
       <label for="learning-genre-input">新しいジャンルを追加</label>
-      <input type="text" id="learning-genre-input" maxlength="30" placeholder="例：英語、数学、Unity、AI、資格勉強">
+      <input type="text" id="learning-genre-input" maxlength="30" placeholder="例：古典シリア語、データサイエンス、PCハードウェア、AI">
       <button class="btn btn-outline btn-sm" onclick="addLearningGenre()">ジャンルを追加</button>
+      <div id="learning-genre-manager" style="margin-top:0.8rem;"></div>
       <label for="learning-session-note">今日学ぶこと（任意）</label>
       <textarea id="learning-session-note" maxlength="140" rows="3"
-        placeholder="例：動画講座でUnityのNavMeshを学ぶ" style="resize:none;"></textarea>
-      <p class="text-sm">動画、ネット記事、教科書、講座など、本以外の学習も記録できます</p>
+        placeholder="例：データサイエンス講座で回帰分析を進める / 古典シリア語の動詞変化を復習する" style="resize:none;"></textarea>
+      <p class="text-sm">古典シリア語、データサイエンス講座、PCハードウェア、AIなど、動画・ネット記事・教科書での学習を記録できます</p>
     </div>
     <div class="text-center mt2">
       <button class="btn" style="font-size:1.1rem; padding:1rem 2.5rem;" onclick="startSession()">
@@ -2078,19 +2079,23 @@ const DB = {
       quizAnswers: [],
       creativeMinutes: 0,
       learningMinutes: 0,
-      learningGenres: ['動画学習', 'ネット調査', '教科書', '講座', '資格勉強'],
+      learningGenres: ['古典シリア語', 'データサイエンス講座', 'PCハードウェア', 'AI'],
     };
   },
   save(data) { localStorage.setItem('dokusho_data', JSON.stringify(data)); }
 };
 
 // 既存データに新フィールドを安全にマージ
-const DEFAULT_LEARNING_GENRES = ['動画学習', 'ネット調査', '教科書', '講座', '資格勉強'];
+const DEFAULT_LEARNING_GENRES = ['古典シリア語', 'データサイエンス講座', 'PCハードウェア', 'AI'];
 const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES };
 let data = Object.assign({}, _defaults, DB.load());
 if (!Array.isArray(data.quizAnswers)) data.quizAnswers = [];
 if (!Array.isArray(data.earnedBadges)) data.earnedBadges = [];
 if (!Array.isArray(data.learningGenres) || data.learningGenres.length === 0) data.learningGenres = [...DEFAULT_LEARNING_GENRES];
+data.learningGenres = [
+  ...DEFAULT_LEARNING_GENRES,
+  ...data.learningGenres.filter(genre => !DEFAULT_LEARNING_GENRES.includes(genre)),
+];
 const ACTIVE_SESSION_KEY = 'dokusho_active_session';
 let timerInterval = null;
 let sessionStart = null;
@@ -2953,6 +2958,27 @@ function renderLearningGenreOptions(selected = '') {
   sel.innerHTML = data.learningGenres.map(genre => `
     <option value="${escapeHtml(genre)}" ${genre === selected ? 'selected' : ''}>${escapeHtml(genre)}</option>
   `).join('');
+  renderLearningGenreManager();
+}
+
+function renderLearningGenreManager() {
+  const wrap = document.getElementById('learning-genre-manager');
+  if (!wrap) return;
+  const genres = Array.isArray(data.learningGenres) ? data.learningGenres : [];
+  if (genres.length === 0) {
+    wrap.innerHTML = '<p class="text-sm">ジャンルを追加すると、ここで編集できます</p>';
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="text-sm" style="margin-bottom:0.45rem;">登録済みジャンル</div>
+    ${genres.map((genre, index) => `
+      <div class="flex" style="gap:0.4rem; margin-bottom:0.45rem; align-items:center;">
+        <input type="text" id="learning-genre-edit-${index}" value="${escapeHtml(genre)}" maxlength="30" aria-label="${escapeHtml(genre)}を編集">
+        <button class="btn btn-outline btn-sm" onclick="editLearningGenre(${index})">更新</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteLearningGenre(${index})">削除</button>
+      </div>
+    `).join('')}
+  `;
 }
 
 function addLearningGenre() {
@@ -2969,6 +2995,44 @@ function addLearningGenre() {
   }
   renderLearningGenreOptions(genre);
   input.value = '';
+}
+
+function editLearningGenre(index) {
+  if (!Array.isArray(data.learningGenres) || !data.learningGenres[index]) return;
+  const input = document.getElementById(`learning-genre-edit-${index}`);
+  const oldGenre = data.learningGenres[index];
+  const newGenre = input?.value.trim();
+  if (!newGenre) {
+    input?.focus();
+    return;
+  }
+  if (newGenre !== oldGenre && data.learningGenres.includes(newGenre)) {
+    alert('同じ名前のジャンルがすでにあります');
+    input?.focus();
+    return;
+  }
+  data.learningGenres[index] = newGenre;
+  data.sessions.forEach(session => {
+    if (session.type === 'learning' && session.learningGenre === oldGenre) {
+      session.learningGenre = newGenre;
+      session.genre = newGenre;
+    }
+  });
+  DB.save(data);
+  renderLearningGenreOptions(newGenre);
+}
+
+function deleteLearningGenre(index) {
+  if (!Array.isArray(data.learningGenres) || !data.learningGenres[index]) return;
+  if (data.learningGenres.length <= 1) {
+    alert('学習ジャンルは1つ以上必要です');
+    return;
+  }
+  const genre = data.learningGenres[index];
+  if (!confirm(`「${genre}」を削除しますか？過去の学習記録は残ります。`)) return;
+  data.learningGenres.splice(index, 1);
+  DB.save(data);
+  renderLearningGenreOptions(data.learningGenres[Math.max(0, index - 1)] || data.learningGenres[0] || '');
 }
 
 function updateSessionModeUI() {
