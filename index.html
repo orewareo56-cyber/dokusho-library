@@ -483,7 +483,7 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
 .session-mode-toggle {
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .session-mode-toggle .btn {
   min-height: 44px;
@@ -1840,9 +1840,10 @@ nav button {
       <div class="session-mode-toggle">
         <button class="btn active" id="session-mode-reading" onclick="setSessionMode('reading')">読書</button>
         <button class="btn btn-outline" id="session-mode-creative" onclick="setSessionMode('creative')">クリエイティブ作業</button>
+        <button class="btn btn-outline" id="session-mode-learning" onclick="setSessionMode('learning')">学習</button>
       </div>
     </div>
-    <div class="card">
+    <div class="card" id="session-book-card">
       <h2 id="session-book-heading">読む本を選ぶ</h2>
       <select id="session-book-select">
         <option value="">-- 本を選んでください --</option>
@@ -1888,6 +1889,18 @@ nav button {
       <textarea id="creative-session-note" maxlength="140" rows="3"
         placeholder="例：読んだ章の発想から、探索ゲームのコアループを組む" style="resize:none;"></textarea>
       <p class="text-sm">読書から生まれたアイデアや、試作したい作品の方向を残せます</p>
+    </div>
+    <div class="card" id="learning-session-card" style="display:none;">
+      <h2>学習ジャンル</h2>
+      <label for="learning-genre-select">ジャンルを選ぶ</label>
+      <select id="learning-genre-select"></select>
+      <label for="learning-genre-input">新しいジャンルを追加</label>
+      <input type="text" id="learning-genre-input" maxlength="30" placeholder="例：英語、数学、Unity、AI、資格勉強">
+      <button class="btn btn-outline btn-sm" onclick="addLearningGenre()">ジャンルを追加</button>
+      <label for="learning-session-note">今日学ぶこと（任意）</label>
+      <textarea id="learning-session-note" maxlength="140" rows="3"
+        placeholder="例：動画講座でUnityのNavMeshを学ぶ" style="resize:none;"></textarea>
+      <p class="text-sm">動画、ネット記事、教科書、講座など、本以外の学習も記録できます</p>
     </div>
     <div class="text-center mt2">
       <button class="btn" style="font-size:1.1rem; padding:1rem 2.5rem;" onclick="startSession()">
@@ -2064,16 +2077,20 @@ const DB = {
       tinyCount: 0,
       quizAnswers: [],
       creativeMinutes: 0,
+      learningMinutes: 0,
+      learningGenres: ['動画学習', 'ネット調査', '教科書', '講座', '資格勉強'],
     };
   },
   save(data) { localStorage.setItem('dokusho_data', JSON.stringify(data)); }
 };
 
 // 既存データに新フィールドを安全にマージ
-const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0 };
+const DEFAULT_LEARNING_GENRES = ['動画学習', 'ネット調査', '教科書', '講座', '資格勉強'];
+const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES };
 let data = Object.assign({}, _defaults, DB.load());
 if (!Array.isArray(data.quizAnswers)) data.quizAnswers = [];
 if (!Array.isArray(data.earnedBadges)) data.earnedBadges = [];
+if (!Array.isArray(data.learningGenres) || data.learningGenres.length === 0) data.learningGenres = [...DEFAULT_LEARNING_GENRES];
 const ACTIVE_SESSION_KEY = 'dokusho_active_session';
 let timerInterval = null;
 let sessionStart = null;
@@ -2217,6 +2234,28 @@ function creativeSourceBooks(d) {
 function creativeNoteCount(d) {
   return creativeSessions(d).filter(s => s.creativeNote && String(s.creativeNote).trim()).length;
 }
+function isLearningSession(s) {
+  return s.type === 'learning';
+}
+function learningSessions(d) {
+  return d.sessions.filter(isLearningSession);
+}
+function learningMinutes(d) {
+  return learningSessions(d).reduce((sum, s) => sum + (s.minutes || 0), 0);
+}
+function learningSessionsSinceDays(d, days) {
+  const cutoff = sinceTimestamp(days);
+  return learningSessions(d).filter(s => new Date(s.date).getTime() >= cutoff);
+}
+function learningMinutesSinceDays(d, days) {
+  return learningSessionsSinceDays(d, days).reduce((sum, s) => sum + (s.minutes || 0), 0);
+}
+function learningGenreVariety(d) {
+  return new Set(learningSessions(d).map(s => s.learningGenre || s.genre).filter(Boolean)).size;
+}
+function learningNoteCount(d) {
+  return learningSessions(d).filter(s => s.learningNote && String(s.learningNote).trim()).length;
+}
 
 const BADGES = [
   { id: 'first_session', name: '初入館', desc: '初めてのセッション完了', progressFn: d => ({ current: d.sessions.length, max: 1 }) },
@@ -2248,7 +2287,7 @@ const BADGES = [
   { id: 'level_sage', name: '書架の賢者', desc: 'レベル「書架の賢者」に到達', progressFn: d => ({ current: d.xp, max: 700 }) },
   { id: 'answer_note_1', name: '問いの書き込み', desc: '問いへの回答メモを1件保存', progressFn: d => ({ current: quizAnswerCount(d), max: 1 }) },
   { id: 'answer_note_10', name: '思索の束', desc: '問いへの回答メモを10件保存', progressFn: d => ({ current: quizAnswerCount(d), max: 10 }) },
-  { id: 'daily_120', name: '長机の午後', desc: '1日に120分以上読書・創作', progressFn: d => ({ current: maxDailyMinutes(d), max: 120 }) },
+  { id: 'daily_120', name: '長机の午後', desc: '1日に120分以上読書・創作・学習', progressFn: d => ({ current: maxDailyMinutes(d), max: 120 }) },
   { id: 'recovery_used', name: '途切れない灯', desc: 'リカバリー権を初めて使用', progressFn: d => ({ current: d.recoveryUsed ? 1 : 0, max: 1 }) },
   { id: 'session_100', name: '百回目の栞', desc: 'セッション100回達成', progressFn: d => ({ current: d.sessions.length, max: 100 }) },
   { id: 'time_3000', name: '三千分の書架', desc: '総読書時間3000分達成', progressFn: d => ({ current: d.totalMinutes, max: 3000 }) },
@@ -2257,7 +2296,7 @@ const BADGES = [
   { id: 'isbn_10', name: '精密な目録係', desc: 'ISBN付きの本を10冊登録', progressFn: d => ({ current: isbnBooks(d), max: 10 }) },
   { id: 'quiz_50', name: '問いの熟練者', desc: '問いに50回回答', progressFn: d => ({ current: d.quizCount || 0, max: 50 }) },
   { id: 'answer_note_30', name: '思索ノート一冊分', desc: '問いへの回答メモを30件保存', progressFn: d => ({ current: quizAnswerCount(d), max: 30 }) },
-  { id: 'daily_30', name: '半刻の集中', desc: '1日に30分以上読書・創作', progressFn: d => ({ current: maxDailyMinutes(d), max: 30 }) },
+  { id: 'daily_30', name: '半刻の集中', desc: '1日に30分以上読書・創作・学習', progressFn: d => ({ current: maxDailyMinutes(d), max: 30 }) },
   { id: 'daily_goal_3', name: '目標達成の三日月', desc: '1日の目標時間を3日達成', progressFn: d => ({ current: dailyGoalDays(d), max: 3 }) },
   { id: 'manual_1', name: 'あとから記録', desc: '手入力で学習時間を1回記録', progressFn: d => ({ current: manualSessionCount(d), max: 1 }) },
   { id: 'tiny_5', name: '一ページの連鎖', desc: '1ページモードを5回完了', progressFn: d => ({ current: d.tinyCount || 0, max: 5 }) },
@@ -2265,11 +2304,11 @@ const BADGES = [
   { id: 'genre_variety_3', name: '三分野の窓', desc: '3ジャンル以上でセッションを記録', progressFn: d => ({ current: genreVariety(d), max: 3 }) },
   { id: 'session_memo_5', name: '収穫の余白', desc: 'セッションメモを5件保存', progressFn: d => ({ current: memoCount(d), max: 5 }) },
   { id: 'weekly_sessions_3', name: 'ウィークリーミッション: 3回通う', desc: '直近7日で3セッション', progressFn: d => ({ current: sessionsSinceDays(d, 7).length, max: 3 }) },
-  { id: 'weekly_minutes_180', name: 'ウィークリーミッション: 180分', desc: '直近7日で読書・創作180分', progressFn: d => ({ current: minutesSinceDays(d, 7), max: 180 }) },
-  { id: 'weekly_active_days_5', name: 'ウィークリーミッション: 5日点灯', desc: '直近7日で5日読書', progressFn: d => ({ current: activeDaysSinceDays(d, 7), max: 5 }) },
+  { id: 'weekly_minutes_180', name: 'ウィークリーミッション: 180分', desc: '直近7日で読書・創作・学習180分', progressFn: d => ({ current: minutesSinceDays(d, 7), max: 180 }) },
+  { id: 'weekly_active_days_5', name: 'ウィークリーミッション: 5日点灯', desc: '直近7日で5日記録', progressFn: d => ({ current: activeDaysSinceDays(d, 7), max: 5 }) },
   { id: 'weekly_quiz_3', name: 'ウィークリーミッション: 問い3つ', desc: '直近7日で問いに3回回答', progressFn: d => ({ current: quizAnswersSinceDays(d, 7), max: 3 }) },
   { id: 'monthly_sessions_12', name: 'マンスリーミッション: 12回通う', desc: '直近30日で12セッション', progressFn: d => ({ current: sessionsSinceDays(d, 30).length, max: 12 }) },
-  { id: 'monthly_minutes_600', name: 'マンスリーミッション: 600分', desc: '直近30日で読書・創作600分', progressFn: d => ({ current: minutesSinceDays(d, 30), max: 600 }) },
+  { id: 'monthly_minutes_600', name: 'マンスリーミッション: 600分', desc: '直近30日で読書・創作・学習600分', progressFn: d => ({ current: minutesSinceDays(d, 30), max: 600 }) },
   { id: 'creative_1', name: '最初の工房入り', desc: 'クリエイティブ作業セッションを1回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 1 }) },
   { id: 'creative_5', name: '構想を編む手', desc: 'クリエイティブ作業セッションを5回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 5 }) },
   { id: 'creative_20', name: '制作習慣の設計者', desc: 'クリエイティブ作業セッションを20回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 20 }) },
@@ -2280,6 +2319,14 @@ const BADGES = [
   { id: 'creative_note_5', name: '制作メモの束', desc: '創作メモ付きセッションを5回完了', progressFn: d => ({ current: creativeNoteCount(d), max: 5 }) },
   { id: 'weekly_creative_180', name: 'ウィークリーミッション: 創作180分', desc: '直近7日で創作を180分記録', progressFn: d => ({ current: creativeMinutesSinceDays(d, 7), max: 180 }) },
   { id: 'monthly_creative_600', name: 'マンスリーミッション: 創作600分', desc: '直近30日で創作を600分記録', progressFn: d => ({ current: creativeMinutesSinceDays(d, 30), max: 600 }) },
+  { id: 'learning_1', name: '最初の学習ログ', desc: '学習セッションを1回完了', progressFn: d => ({ current: learningSessions(d).length, max: 1 }) },
+  { id: 'learning_5', name: '学びの助走', desc: '学習セッションを5回完了', progressFn: d => ({ current: learningSessions(d).length, max: 5 }) },
+  { id: 'learning_20', name: '自習の航路', desc: '学習セッションを20回完了', progressFn: d => ({ current: learningSessions(d).length, max: 20 }) },
+  { id: 'learning_minutes_120', name: '二時間の自習室', desc: '学習時間を合計120分記録', progressFn: d => ({ current: learningMinutes(d), max: 120 }) },
+  { id: 'learning_minutes_600', name: '十時間の探究', desc: '学習時間を合計600分記録', progressFn: d => ({ current: learningMinutes(d), max: 600 }) },
+  { id: 'learning_genres_3', name: '三分野を渡る学び', desc: '3種類以上の学習ジャンルで記録', progressFn: d => ({ current: learningGenreVariety(d), max: 3 }) },
+  { id: 'learning_note_5', name: '学習メモの束', desc: '学習メモ付きセッションを5回完了', progressFn: d => ({ current: learningNoteCount(d), max: 5 }) },
+  { id: 'weekly_learning_180', name: 'ウィークリーミッション: 学習180分', desc: '直近7日で学習を180分記録', progressFn: d => ({ current: learningMinutesSinceDays(d, 7), max: 180 }) },
 ];
 
 function badgeProgress(badge, d) {
@@ -2832,6 +2879,7 @@ const SURPRISE_QUOTES = [
 ];
 let currentPreNote = '';
 let currentCreativeNote = '';
+let currentLearningNote = '';
 const CREATIVE_TYPE_LABELS = {
   game: 'ゲーム構想',
   prototype: 'プロトタイプ',
@@ -2846,6 +2894,13 @@ const CREATIVE_QUOTES = [
   'よい構想は、問いと制約のあいだで輪郭を持ち始めます。',
   '読書で得た違和感は、作品のエンジンになります。',
   '一行のメモ、一枚のラフ、ひとつのルール。それで工房は動き出します。',
+];
+const LEARNING_QUOTES = [
+  '今日は理解を一段だけ深くすれば十分です。',
+  '広く学ぶ日は、あとでつながる点を増やす日です。',
+  '分からなかった箇所は、次に戻るための目印になります。',
+  '動画、記事、教科書。媒体が変わっても、積み上げた時間は消えません。',
+  '学習の成果は、説明できる一文に少しずつ宿ります。',
 ];
 let isTinySession = false;
 let tinyBannerTimeout = null;
@@ -2885,30 +2940,72 @@ const BRIEFINGS = {
 
 function setSessionMode(mode) {
   if (sessionStart) return;
-  sessionMode = mode === 'creative' ? 'creative' : 'reading';
+  sessionMode = ['reading', 'creative', 'learning'].includes(mode) ? mode : 'reading';
   initSessionSetup();
+}
+
+function renderLearningGenreOptions(selected = '') {
+  const sel = document.getElementById('learning-genre-select');
+  if (!sel) return;
+  if (!Array.isArray(data.learningGenres) || data.learningGenres.length === 0) {
+    data.learningGenres = [...DEFAULT_LEARNING_GENRES];
+  }
+  sel.innerHTML = data.learningGenres.map(genre => `
+    <option value="${escapeHtml(genre)}" ${genre === selected ? 'selected' : ''}>${escapeHtml(genre)}</option>
+  `).join('');
+}
+
+function addLearningGenre() {
+  const input = document.getElementById('learning-genre-input');
+  const genre = input?.value.trim();
+  if (!genre) {
+    input?.focus();
+    return;
+  }
+  if (!Array.isArray(data.learningGenres)) data.learningGenres = [];
+  if (!data.learningGenres.includes(genre)) {
+    data.learningGenres.push(genre);
+    DB.save(data);
+  }
+  renderLearningGenreOptions(genre);
+  input.value = '';
 }
 
 function updateSessionModeUI() {
   const isCreative = sessionMode === 'creative';
+  const isLearning = sessionMode === 'learning';
   const readingBtn = document.getElementById('session-mode-reading');
   const creativeBtn = document.getElementById('session-mode-creative');
-  if (readingBtn && creativeBtn) {
-    readingBtn.classList.toggle('active', !isCreative);
-    readingBtn.classList.toggle('btn-outline', isCreative);
+  const learningBtn = document.getElementById('session-mode-learning');
+  if (readingBtn && creativeBtn && learningBtn) {
+    readingBtn.classList.toggle('active', !isCreative && !isLearning);
+    readingBtn.classList.toggle('btn-outline', isCreative || isLearning);
     creativeBtn.classList.toggle('active', isCreative);
     creativeBtn.classList.toggle('btn-outline', !isCreative);
+    learningBtn.classList.toggle('active', isLearning);
+    learningBtn.classList.toggle('btn-outline', !isLearning);
   }
+  const bookCard = document.getElementById('session-book-card');
+  if (bookCard) bookCard.style.display = isLearning ? 'none' : 'block';
   const heading = document.getElementById('session-book-heading');
   if (heading) heading.textContent = isCreative ? 'ベースにする本を選ぶ' : '読む本を選ぶ';
   const creativeCard = document.getElementById('creative-session-card');
   if (creativeCard) creativeCard.style.display = isCreative ? 'block' : 'none';
+  const learningCard = document.getElementById('learning-session-card');
+  if (learningCard) learningCard.style.display = isLearning ? 'block' : 'none';
+  if (isLearning) renderLearningGenreOptions();
   const noteEl = document.getElementById('session-pre-note');
   if (noteEl) {
-    noteEl.closest('.card').style.display = isCreative ? 'none' : 'block';
+    noteEl.closest('.card').style.display = (isCreative || isLearning) ? 'none' : 'block';
   }
   const startLabel = document.getElementById('session-start-label');
-  if (startLabel) startLabel.textContent = isCreative ? '創作セッション開始' : 'セッション開始';
+  if (startLabel) {
+    startLabel.textContent = isLearning
+      ? '学習セッション開始'
+      : isCreative
+        ? '創作セッション開始'
+        : 'セッション開始';
+  }
 }
 
 function initSessionSetup() {
@@ -2918,6 +3015,7 @@ function initSessionSetup() {
   updateSessionModeUI();
   const sel = document.getElementById('session-book-select');
   const isCreative = sessionMode === 'creative';
+  const isLearning = sessionMode === 'learning';
   sel.innerHTML = isCreative
     ? '<option value="">-- ベースにする本を選んでください（任意） --</option>'
     : '<option value="">-- 読書中の本を選んでください --</option>';
@@ -2936,7 +3034,7 @@ function initSessionSetup() {
     const opt = this.selectedOptions[0];
     const genre = opt?.dataset.genre;
     const briefDiv = document.getElementById('session-briefing');
-    if (!isCreative && genre && BRIEFINGS[genre]) {
+    if (!isCreative && !isLearning && genre && BRIEFINGS[genre]) {
       const arr = BRIEFINGS[genre];
       document.getElementById('briefing-text').textContent = arr[Math.floor(Math.random() * arr.length)];
       briefDiv.style.display = 'block';
@@ -3061,7 +3159,7 @@ function readActiveSession() {
 }
 
 function applySessionStateToForm(sessionState) {
-  sessionMode = sessionState.mode === 'creative' ? 'creative' : 'reading';
+  sessionMode = ['creative', 'learning'].includes(sessionState.mode) ? sessionState.mode : 'reading';
   updateSessionModeUI();
   const sel = document.getElementById('session-book-select');
   const bookId = sessionState.bookId ? String(sessionState.bookId) : '';
@@ -3079,6 +3177,9 @@ function applySessionStateToForm(sessionState) {
   if (creativeTypeEl) creativeTypeEl.value = sessionState.creativeType || 'game';
   const creativeNoteEl = document.getElementById('creative-session-note');
   if (creativeNoteEl) creativeNoteEl.value = sessionState.creativeNote || '';
+  renderLearningGenreOptions(sessionState.learningGenre || '');
+  const learningNoteEl = document.getElementById('learning-session-note');
+  if (learningNoteEl) learningNoteEl.value = sessionState.learningNote || '';
 }
 
 function renderActiveSession(sessionState, notice = '') {
@@ -3091,6 +3192,8 @@ function renderActiveSession(sessionState, notice = '') {
     ? '1ページモード — マイペースでOK'
     : sessionState.mode === 'creative'
       ? `創作目標: ${sessionState.targetMinutes}分`
+      : sessionState.mode === 'learning'
+        ? `学習目標: ${sessionState.targetMinutes}分`
       : `目標: ${sessionState.targetMinutes}分`);
   applyQuoteState(
     notice || sessionState.quote || '静かにページを開きましょう。',
@@ -3107,21 +3210,27 @@ function saveActiveSession(overrides = {}) {
   const hasOverride = key => Object.prototype.hasOwnProperty.call(overrides, key);
   const snapshotMode = overrides.mode ?? sessionMode;
   const snapshotCreativeType = overrides.creativeType ?? (document.getElementById('creative-work-type')?.value || 'game');
+  const snapshotLearningGenre = overrides.learningGenre ?? (document.getElementById('learning-genre-select')?.value || data.learningGenres?.[0] || '学習');
+  const snapshotBookId = snapshotMode === 'learning' ? '' : (overrides.bookId ?? bookId);
   let snapshotBookName = overrides.bookName ?? bookName;
   if (snapshotMode === 'creative' && !hasOverride('bookName')) {
     const baseBookName = bookId ? bookName : 'ベース本未選択';
     snapshotBookName = `${CREATIVE_TYPE_LABELS[snapshotCreativeType] || '創作'} ／ ${baseBookName}`;
+  } else if (snapshotMode === 'learning' && !hasOverride('bookName')) {
+    snapshotBookName = `学習 ／ ${snapshotLearningGenre}`;
   }
   const snapshot = {
     start: sessionStart,
     mode: snapshotMode,
-    bookId: overrides.bookId ?? bookId,
+    bookId: snapshotBookId,
     bookName: snapshotBookName,
     targetMinutes: overrides.targetMinutes ?? parseInt(document.getElementById('target-minutes')?.value || '30', 10),
     isTiny: overrides.isTiny ?? isTinySession,
     preNote: overrides.preNote ?? (document.getElementById('session-pre-note')?.value || currentPreNote),
     creativeType: snapshotCreativeType,
     creativeNote: overrides.creativeNote ?? (document.getElementById('creative-session-note')?.value || currentCreativeNote),
+    learningGenre: snapshotLearningGenre,
+    learningNote: overrides.learningNote ?? (document.getElementById('learning-session-note')?.value || currentLearningNote),
     quote: overrides.quote ?? quoteState.text,
     quoteHighlighted: overrides.quoteHighlighted ?? quoteState.highlighted,
     tinyBannerShown: overrides.tinyBannerShown ?? (document.getElementById('tiny-banner')?.style.display === 'flex'),
@@ -3141,7 +3250,7 @@ function restoreActiveSession(options = {}) {
   const s = readActiveSession();
   if (!s) return false;
   if (!options.skipScreenChange) activateScreen('session');
-  sessionMode = s.mode === 'creative' ? 'creative' : 'reading';
+  sessionMode = ['creative', 'learning'].includes(s.mode) ? s.mode : 'reading';
   initSessionSetup();
   sessionStart = s.start;
   isTinySession = !!s.isTiny;
@@ -3150,10 +3259,13 @@ function restoreActiveSession(options = {}) {
   pausedTotal = Math.max(0, parseInt(s.pausedTotal || 0, 10));
   currentPreNote = s.preNote || '';
   currentCreativeNote = s.creativeNote || '';
+  currentLearningNote = s.learningNote || '';
   renderActiveSession(
     s,
     options.notice === undefined
-      ? (sessionMode === 'creative'
+      ? (sessionMode === 'learning'
+        ? '中断した学習セッションを再開しました。学びを続けてください。'
+        : sessionMode === 'creative'
         ? '中断した創作セッションを再開しました。作業を続けてください。'
         : '中断したセッションを再開しました。読書を続けてください。')
       : options.notice
@@ -3169,21 +3281,27 @@ function startSession() {
   pausedTotal = 0;
   currentPreNote = document.getElementById('session-pre-note')?.value || '';
   currentCreativeNote = document.getElementById('creative-session-note')?.value || '';
+  currentLearningNote = document.getElementById('learning-session-note')?.value || '';
   const bookSel = document.getElementById('session-book-select');
-  const bookId = bookSel.value;
-  const mode = sessionMode === 'creative' ? 'creative' : 'reading';
+  const mode = ['creative', 'learning'].includes(sessionMode) ? sessionMode : 'reading';
+  const bookId = mode === 'learning' ? '' : bookSel.value;
   const creativeType = document.getElementById('creative-work-type')?.value || 'game';
+  const learningGenre = document.getElementById('learning-genre-select')?.value || data.learningGenres?.[0] || '学習';
   sessionStart = Date.now();
   document.getElementById('session-setup').style.display = 'none';
   document.getElementById('session-running').style.display = 'block';
   const bookName = bookId ? bookSel.selectedOptions[0].textContent : (mode === 'creative' ? 'ベース本未選択' : '（本未選択）');
-  const displayName = mode === 'creative'
+  const displayName = mode === 'learning'
+    ? `学習 ／ ${learningGenre}`
+    : mode === 'creative'
     ? `${CREATIVE_TYPE_LABELS[creativeType] || '創作'} ／ ${bookName}`
     : bookName;
   document.getElementById('session-book-name').textContent = displayName;
   const target = parseInt(document.getElementById('target-minutes').value);
-  setTimerTargetText(mode === 'creative' ? `創作目標: ${target}分` : `目標: ${target}分`);
-  if (mode === 'creative') {
+  setTimerTargetText(mode === 'learning' ? `学習目標: ${target}分` : mode === 'creative' ? `創作目標: ${target}分` : `目標: ${target}分`);
+  if (mode === 'learning') {
+    applyQuoteState(LEARNING_QUOTES[Math.floor(Math.random() * LEARNING_QUOTES.length)], true);
+  } else if (mode === 'creative') {
     applyQuoteState(CREATIVE_QUOTES[Math.floor(Math.random() * CREATIVE_QUOTES.length)], true);
   } else {
     // サプライズ名言（30%の確率）
@@ -3193,7 +3311,7 @@ function startSession() {
   }
   clearTinyBannerTimer();
   setTinyBannerVisible(false);
-  saveActiveSession({ mode, bookId, bookName: displayName, targetMinutes: target, creativeType, creativeNote: currentCreativeNote });
+  saveActiveSession({ mode, bookId, bookName: displayName, targetMinutes: target, creativeType, creativeNote: currentCreativeNote, learningGenre, learningNote: currentLearningNote });
   restartTimerInterval();
 }
 
@@ -3205,6 +3323,7 @@ function startTinySession() {
   pauseStarted = null;
   pausedTotal = 0;
   currentPreNote = '';
+  currentLearningNote = '';
   // 直前に使った本を自動選択
   showScreen('session');
   setTimeout(() => {
@@ -3364,6 +3483,7 @@ function cancelSession() {
   pausedTotal = 0;
   currentPreNote = '';
   currentCreativeNote = '';
+  currentLearningNote = '';
   isTinySession = false;
   clearActiveSession();
   clearTinyBannerTimer();
@@ -3383,15 +3503,16 @@ function endSession() {
   const elapsed = getSessionElapsedSeconds(activeSession || { start: startAt });
   const minutes = Math.max(1, Math.floor(elapsed / 60));
   const wasTinySession = activeSession?.isTiny ?? isTinySession;
-  const mode = activeSession?.mode === 'creative' ? 'creative' : 'reading';
+  const mode = ['creative', 'learning'].includes(activeSession?.mode) ? activeSession.mode : 'reading';
   currentPreNote = activeSession?.preNote || currentPreNote;
   currentCreativeNote = activeSession?.creativeNote || currentCreativeNote;
+  currentLearningNote = activeSession?.learningNote || currentLearningNote;
   isTinySession = wasTinySession;
 
   // 本情報取得
   const bookId = activeSession?.bookId ? parseInt(activeSession.bookId, 10) : null;
   const book = bookId ? data.books.find(b => b.id === bookId) : null;
-  const genre = book?.genre || 'その他';
+  const genre = mode === 'learning' ? (activeSession?.learningGenre || '学習') : (book?.genre || 'その他');
 
   // バナー消去
   setTinyBannerVisible(false);
@@ -3408,9 +3529,13 @@ function endSession() {
     preNote: currentPreNote, isTiny: isTinySession,
     creativeType: mode === 'creative' ? (activeSession?.creativeType || 'game') : undefined,
     creativeNote: mode === 'creative' ? currentCreativeNote : undefined,
+    learningGenre: mode === 'learning' ? genre : undefined,
+    learningNote: mode === 'learning' ? currentLearningNote : undefined,
   };
   data.sessions.push(session);
-  if (mode === 'creative') {
+  if (mode === 'learning') {
+    data.learningMinutes = (data.learningMinutes || 0) + minutes;
+  } else if (mode === 'creative') {
     data.creativeMinutes = (data.creativeMinutes || 0) + minutes;
   } else {
     data.totalMinutes += minutes;
@@ -3456,8 +3581,10 @@ function endSession() {
 
   const m2 = String(Math.floor(elapsed / 60)).padStart(2, '0');
   const s2 = String(elapsed % 60).padStart(2, '0');
-  document.getElementById('result-title').textContent = mode === 'creative' ? '創作セッション完了！' : '読書セッション完了！';
-  document.getElementById('result-time').innerHTML = `<span style="font-size:1.8rem; color:var(--accent2);">${m2}:${s2}</span> ${mode === 'creative' ? '創作しました' : '読書しました'}`;
+  document.getElementById('result-title').textContent = mode === 'learning'
+    ? '学習セッション完了！'
+    : mode === 'creative' ? '創作セッション完了！' : '読書セッション完了！';
+  document.getElementById('result-time').innerHTML = `<span style="font-size:1.8rem; color:var(--accent2);">${m2}:${s2}</span> ${mode === 'learning' ? '学習しました' : mode === 'creative' ? '創作しました' : '読書しました'}`;
 
   // 収穫カード
   const harvests = {
@@ -3469,7 +3596,16 @@ function endSession() {
     'その他': ['今日も一歩前進しました', '知識の種を蒔きました', '継続が力になっています'],
   };
   let resultCardHtml = '';
-  if (mode === 'creative') {
+  if (mode === 'learning') {
+    const learningHarvests = [
+      '本以外の媒体からも、今日の知識を積み上げました',
+      '分からなかった点と分かった点の境界が少し明確になりました',
+      '次の読書・制作につながる材料を増やしました',
+    ];
+    const noteHtml = currentLearningNote
+      ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">学習メモ: ${escapeHtml(currentLearningNote)}</div>` : '';
+    resultCardHtml = `<div style="margin-bottom:0.5rem;">• 学習ジャンル: ${escapeHtml(genre)}</div>` + noteHtml + learningHarvests.map(h => `<div style="margin-bottom:0.5rem;">• ${h}</div>`).join('');
+  } else if (mode === 'creative') {
     const creativeLabel = CREATIVE_TYPE_LABELS[session.creativeType] || '創作';
     const creativeHarvests = [
       '読書で得た素材を作品の形へ変換しました',
@@ -3518,7 +3654,14 @@ function endSession() {
     '読んだ内容から、作品のルール・場面・感情に変換できるものは何ですか？',
     'この構想をゲームや作品として動かすなら、最初の30秒で何を体験させますか？',
   ];
-  document.getElementById('result-question').textContent = mode === 'creative'
+  const learningQuestions = [
+    '今日学んだ内容を一文で説明すると、どうなりますか？',
+    '次に調べるべき用語・疑問は何ですか？',
+    'この学習内容を読書や創作に接続するとしたら、どこで使えますか？',
+  ];
+  document.getElementById('result-question').textContent = mode === 'learning'
+    ? learningQuestions[Math.floor(Math.random() * learningQuestions.length)]
+    : mode === 'creative'
     ? creativeQuestions[Math.floor(Math.random() * creativeQuestions.length)]
     : qArr[Math.floor(Math.random() * qArr.length)];
   playProgressCelebration(newBadges, previousXp);
@@ -3547,6 +3690,7 @@ function resetSession() {
   isTinySession = false;
   currentPreNote = '';
   currentCreativeNote = '';
+  currentLearningNote = '';
   clearTinyBannerTimer();
   setTinyBannerVisible(false);
   showScreen('home');
