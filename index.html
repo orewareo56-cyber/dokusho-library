@@ -579,6 +579,58 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
 .level-rank-5 { color: #ff8fa3; text-shadow: 0 0 16px rgba(255,143,163,0.4); }
 .level-rank-6 { color: #ffd166; text-shadow: 0 0 18px rgba(255,209,102,0.48); }
 .level-rank-7 { color: #ffffff; text-shadow: 0 0 10px #ffd166, 0 0 22px rgba(124, 92, 255, 0.62); }
+.level-rank-8 { color: #8de8d7; text-shadow: 0 0 18px rgba(141,232,215,0.46); }
+.level-rank-9 { color: #f5b7ff; text-shadow: 0 0 20px rgba(245,183,255,0.5); }
+.level-rank-10 { color: #ffd98a; text-shadow: 0 0 22px rgba(255,217,138,0.54); }
+.level-rank-11 { color: #9ed0ff; text-shadow: 0 0 24px rgba(158,208,255,0.58); }
+.level-rank-12 { color: #ffffff; text-shadow: 0 0 12px #75e0cf, 0 0 28px rgba(245,209,123,0.68); }
+.level-detail-toggle {
+  margin-top: 0.85rem;
+}
+.level-detail-panel {
+  border-top: 1px solid rgba(232, 160, 32, 0.24);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.level-summary-grid {
+  display: grid;
+  gap: 0.45rem 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+.level-summary-item {
+  border-bottom: 1px solid rgba(232, 160, 32, 0.16);
+  color: var(--text2);
+  font-size: 0.76rem;
+  padding: 0.45rem 0;
+}
+.level-summary-item strong {
+  color: #f1d287;
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.12rem;
+}
+.level-roadmap {
+  display: grid;
+  gap: 0.38rem;
+}
+.level-roadmap-row {
+  align-items: center;
+  border-left: 3px solid rgba(232, 160, 32, 0.2);
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  padding: 0.5rem 0.55rem;
+}
+.level-roadmap-row.reached { border-left-color: #2a9d8f; }
+.level-roadmap-row.current {
+  background: rgba(232, 160, 32, 0.1);
+  border-left-color: #f1d287;
+}
+.level-roadmap-rank { color: var(--text3); font-size: 0.72rem; }
+.level-roadmap-name { color: var(--text2); font-size: 0.8rem; line-height: 1.4; }
+.level-roadmap-row.current .level-roadmap-name { color: #f1d287; font-weight: 700; }
+.level-roadmap-xp { color: var(--text3); font-size: 0.72rem; white-space: nowrap; }
 .motivation-panel {
   background: linear-gradient(135deg, rgba(42, 157, 143, 0.18), rgba(232, 160, 32, 0.13));
   border: 1px solid rgba(117, 224, 207, 0.22);
@@ -2035,6 +2087,13 @@ nav button {
     </div>
     <div class="text-sm mt1">次のレベルまで: <span id="ach-next-level"></span></div>
     <div class="motivation-panel mt1" id="motivation-panel"></div>
+    <button class="btn btn-outline btn-sm level-detail-toggle" id="level-detail-toggle" aria-expanded="false" onclick="toggleLevelDetails()">レベルと成果を見る</button>
+    <div class="level-detail-panel" id="level-detail-panel" style="display:none;">
+      <h3>これまでの成果</h3>
+      <div class="level-summary-grid" id="level-summary-grid"></div>
+      <h3>レベル一覧</h3>
+      <div class="level-roadmap" id="level-roadmap"></div>
+    </div>
   </div>
 
   <div class="card">
@@ -2139,6 +2198,11 @@ const LEVELS = [
   { name: '書物の守護者', xp: 2500 },
   { name: '知識の聖域の主', xp: 4500 },
   { name: '永遠の探求者', xp: 8000 },
+  { name: '学際の編纂者', xp: 12000 },
+  { name: '創造する学匠', xp: 18000 },
+  { name: '万巻の航海者', xp: 26000 },
+  { name: '知の星図を描く者', xp: 36000 },
+  { name: '仮想図書館の大賢者', xp: 50000 },
 ];
 
 function getLevel(xp) {
@@ -2269,6 +2333,18 @@ function learningGenreVariety(d) {
 function learningNoteCount(d) {
   return learningSessions(d).filter(s => s.learningNote && String(s.learningNote).trim()).length;
 }
+function totalProgressMinutes(d) {
+  return d.sessions.reduce((sum, s) => sum + (Number(s.minutes) || 0), 0);
+}
+function allTimeActiveDays(d) {
+  return new Set(d.sessions.map(s => new Date(s.date).toDateString())).size;
+}
+function maxSessionMinutes(d) {
+  return Math.max(0, ...d.sessions.map(s => Number(s.minutes) || 0));
+}
+function learningGenreSessionCount(d, keyword) {
+  return learningSessions(d).filter(s => String(s.learningGenre || s.genre || '').includes(keyword)).length;
+}
 
 const BADGES = [
   { id: 'first_session', name: '初入館', desc: '初めてのセッション完了', progressFn: d => ({ current: d.sessions.length, max: 1 }) },
@@ -2340,6 +2416,32 @@ const BADGES = [
   { id: 'learning_genres_3', name: '三分野を渡る学び', desc: '3種類以上の学習ジャンルで記録', progressFn: d => ({ current: learningGenreVariety(d), max: 3 }) },
   { id: 'learning_note_5', name: '学習メモの束', desc: '学習メモ付きセッションを5回完了', progressFn: d => ({ current: learningNoteCount(d), max: 5 }) },
   { id: 'weekly_learning_180', name: 'ウィークリーミッション: 学習180分', desc: '直近7日で学習を180分記録', progressFn: d => ({ current: learningMinutesSinceDays(d, 7), max: 180 }) },
+  { id: 'session_75', name: '七十五の栞', desc: 'セッション75回達成', progressFn: d => ({ current: d.sessions.length, max: 75 }) },
+  { id: 'session_150', name: '百五十夜の記録', desc: 'セッション150回達成', progressFn: d => ({ current: d.sessions.length, max: 150 }) },
+  { id: 'streak_45', name: '四十五日の書灯', desc: '45日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 45 }) },
+  { id: 'streak_60', name: '二月の継続', desc: '60日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 60 }) },
+  { id: 'streak_100', name: '百日の巡礼', desc: '100日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 100 }) },
+  { id: 'progress_1800', name: '三十時間の蓄積', desc: '読書・創作・学習を合計1800分記録', progressFn: d => ({ current: totalProgressMinutes(d), max: 1800 }) },
+  { id: 'progress_2500', name: '越境する二千五百分', desc: '読書・創作・学習を合計2500分記録', progressFn: d => ({ current: totalProgressMinutes(d), max: 2500 }) },
+  { id: 'progress_5000', name: '五千分の知的生活', desc: '読書・創作・学習を合計5000分記録', progressFn: d => ({ current: totalProgressMinutes(d), max: 5000 }) },
+  { id: 'time_1500', name: '千五百分の読書', desc: '総読書時間1500分達成', progressFn: d => ({ current: d.totalMinutes, max: 1500 }) },
+  { id: 'time_2000', name: '二千分の書海', desc: '総読書時間2000分達成', progressFn: d => ({ current: d.totalMinutes, max: 2000 }) },
+  { id: 'books_15', name: '十五冊の書棚', desc: '本を15冊登録', progressFn: d => ({ current: d.books.length, max: 15 }) },
+  { id: 'books_20', name: '二十冊の選書', desc: '本を20冊登録', progressFn: d => ({ current: d.books.length, max: 20 }) },
+  { id: 'active_days_50', name: '五十日の記録', desc: '通算50日セッションを記録', progressFn: d => ({ current: allTimeActiveDays(d), max: 50 }) },
+  { id: 'active_days_100', name: '百日の記録', desc: '通算100日セッションを記録', progressFn: d => ({ current: allTimeActiveDays(d), max: 100 }) },
+  { id: 'daily_300', name: '五時間の没頭', desc: '1日に300分以上読書・創作・学習', progressFn: d => ({ current: maxDailyMinutes(d), max: 300 }) },
+  { id: 'long_session_120', name: '二時間の深潜り', desc: '1回のセッションで120分記録', progressFn: d => ({ current: maxSessionMinutes(d), max: 120 }) },
+  { id: 'learning_10', name: '十回の自習', desc: '学習セッションを10回完了', progressFn: d => ({ current: learningSessions(d).length, max: 10 }) },
+  { id: 'learning_datascience_10', name: 'データを読む眼', desc: 'データサイエンスの学習を10回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'データサイエンス'), max: 10 }) },
+  { id: 'learning_syriac_5', name: '古典シリア語の入口', desc: 'シリア語の学習を5回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'シリア語'), max: 5 }) },
+  { id: 'genre_science_50', name: '科学史の半百', desc: '科学史ジャンルで50セッション', progressFn: d => ({ current: countGenreSessions(d, '科学史'), max: 50 }) },
+  { id: 'genre_philosophy_30', name: '三十の概念', desc: '哲学ジャンルで30セッション', progressFn: d => ({ current: countGenreSessions(d, '哲学'), max: 30 }) },
+  { id: 'genre_history_20', name: '二十の年代記', desc: '歴史ジャンルで20セッション', progressFn: d => ({ current: countGenreSessions(d, '歴史'), max: 20 }) },
+  { id: 'level_guardian', name: '書物の守護者就任', desc: 'レベル「書物の守護者」に到達', progressFn: d => ({ current: d.xp, max: 2500 }) },
+  { id: 'level_sanctuary', name: '知識の聖域を拓く', desc: 'レベル「知識の聖域の主」に到達', progressFn: d => ({ current: d.xp, max: 4500 }) },
+  { id: 'level_eternal', name: '永遠の探求へ', desc: 'レベル「永遠の探求者」に到達', progressFn: d => ({ current: d.xp, max: 8000 }) },
+  { id: 'level_compiler', name: '学際の編纂者就任', desc: 'レベル「学際の編纂者」に到達', progressFn: d => ({ current: d.xp, max: 12000 }) },
 ];
 
 function badgeProgress(badge, d) {
@@ -4111,6 +4213,65 @@ async function exportReadingData() {
   }
 }
 
+function formatProgressMinutes(minutes) {
+  const safeMinutes = Math.max(0, Number(minutes) || 0);
+  const hours = Math.floor(safeMinutes / 60);
+  const rest = safeMinutes % 60;
+  return hours > 0 ? `${hours}時間${rest}分` : `${rest}分`;
+}
+
+function toggleLevelDetails() {
+  const panel = document.getElementById('level-detail-panel');
+  const button = document.getElementById('level-detail-toggle');
+  if (!panel || !button) return;
+  const willOpen = panel.style.display === 'none';
+  panel.style.display = willOpen ? 'block' : 'none';
+  button.setAttribute('aria-expanded', String(willOpen));
+  button.textContent = willOpen ? 'レベルと成果を閉じる' : 'レベルと成果を見る';
+  if (willOpen) renderLevelDetails();
+}
+
+function renderLevelDetails() {
+  const summary = document.getElementById('level-summary-grid');
+  const roadmap = document.getElementById('level-roadmap');
+  if (!summary || !roadmap) return;
+  const currentLevelIndex = getLevelIndex(data.xp);
+  const earnedCount = BADGES.filter(badge => data.earnedBadges.includes(badge.id)).length;
+  const totalMinutes = totalProgressMinutes(data);
+  const items = [
+    { value: `${data.xp.toLocaleString()} XP`, label: '現在のXP' },
+    { value: `${data.sessions.length}回`, label: '全セッション' },
+    { value: formatProgressMinutes(totalMinutes), label: '総進捗時間' },
+    { value: `${data.streak || 0}日`, label: '現在の連続記録' },
+    { value: `${allTimeActiveDays(data)}日`, label: '通算記録日数' },
+    { value: `${data.books.length}冊`, label: '登録した本' },
+    { value: formatProgressMinutes(data.totalMinutes), label: '読書時間' },
+    { value: formatProgressMinutes(learningMinutes(data)), label: '学習時間' },
+    { value: formatProgressMinutes(creativeMinutes(data)), label: '創作時間' },
+    { value: `${earnedCount} / ${BADGES.length}`, label: '獲得実績' },
+  ];
+  summary.innerHTML = items.map(item => `
+    <div class="level-summary-item">
+      <strong>${item.value}</strong>
+      ${item.label}
+    </div>
+  `).join('');
+
+  roadmap.innerHTML = LEVELS.map((level, index) => {
+    const reached = data.xp >= level.xp;
+    const current = index === currentLevelIndex;
+    const remaining = Math.max(0, level.xp - data.xp);
+    const note = current ? '現在のレベル' : reached ? '達成済み' : `あと ${remaining.toLocaleString()} XP`;
+    return `
+      <div class="level-roadmap-row ${reached ? 'reached' : ''} ${current ? 'current' : ''}">
+        <div class="level-roadmap-rank">Lv.${index + 1}</div>
+        <div class="level-roadmap-name">${level.name}<div class="text-sm" style="font-size:0.65rem; margin-top:0.12rem;">${note}</div></div>
+        <div class="level-roadmap-xp">${level.xp.toLocaleString()} XP</div>
+      </div>
+    `;
+  }).join('');
+}
+
 function setAchievementView(view) {
   achievementView = view === 'earned' ? 'earned' : 'pending';
   updateAchievements();
@@ -4118,7 +4279,10 @@ function setAchievementView(view) {
 
 function updateAchievements() {
   const unlockedNow = checkBadges();
-  if (unlockedNow.length > 0) DB.save(data);
+  if (unlockedNow.length > 0) {
+    DB.save(data);
+    playProgressCelebration(unlockedNow);
+  }
 
   const lvl = getLevel(data.xp);
   const levelRank = getLevelIndex(data.xp);
@@ -4193,6 +4357,7 @@ function updateAchievements() {
   } else {
     motivation.innerHTML = `<strong>すごい到達点:</strong> 実績はすべて獲得済みです。今日は ${todayMinutes}分、次は称号の色をさらに育てましょう。`;
   }
+  renderLevelDetails();
 }
 
 // ==================== 初期化 ====================
