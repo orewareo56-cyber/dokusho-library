@@ -26,10 +26,11 @@
   --silver: #a8a090;
   --nav-height: 56px;
   --bottom-overlay-offset: 88px;
+  --browser-ui-bottom-offset: 0px;
   --library-bg-image: url('assets/medieval-islamic-library-bg.png');
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-padding-bottom: calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom)); }
+html { scroll-padding-bottom: calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset)); }
 body {
   background:
     radial-gradient(circle at 50% 8%, rgba(236, 178, 76, 0.15), transparent 28%),
@@ -51,7 +52,7 @@ nav {
   backdrop-filter: blur(14px);
   display: flex;
   position: fixed;
-  bottom: 0;
+  bottom: var(--browser-ui-bottom-offset);
   left: 0; right: 0;
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom);
@@ -110,7 +111,7 @@ nav button:hover { color: var(--text); }
 /* メインコンテンツ */
 main {
   flex: 1;
-  padding: 1rem 1rem calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom));
+  padding: 1rem 1rem calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset));
   max-width: 720px;
   margin: 0 auto;
   width: 100%;
@@ -141,7 +142,7 @@ h1 { font-size: 1.5rem; color: var(--accent2); margin-bottom: 1rem; }
 h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 0.8rem; }
 h3 { font-size: 0.95rem; color: var(--text2); margin-bottom: 0.5rem; }
 .home-shell {
-  min-height: calc(100vh - var(--bottom-overlay-offset));
+  min-height: calc(100dvh - var(--bottom-overlay-offset) - var(--browser-ui-bottom-offset));
   padding-top: calc(0.75rem + env(safe-area-inset-top));
 }
 .home-hero {
@@ -675,7 +676,7 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
 .xp-animate { animation: xpGain 0.5s ease; }
 /* レスポンシブ */
 @media (max-width: 480px) {
-  main { padding: 0.85rem 0.85rem calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + 1rem); }
+  main { padding: 0.85rem 0.85rem calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset) + 1rem); }
   nav button {
     font-size: 0.68rem;
     min-height: 62px;
@@ -773,7 +774,7 @@ select option { background: var(--bg2); }
 .xp-bar.goal-near, .xp-bar.goal-done { animation: goalGlow 1.5s ease-in-out infinite; }
 /* 1ページバナー */
 #tiny-banner {
-  position: fixed; bottom: calc(var(--nav-height) + env(safe-area-inset-bottom)); left:0; right:0;
+  position: fixed; bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset)); left:0; right:0;
   background: var(--card); border-top: 1px solid var(--accent);
   padding: 0.8rem 1rem; z-index:200;
   align-items:center; justify-content:space-between; gap:0.5rem;
@@ -1043,13 +1044,13 @@ body.home-active {
 }
 body.home-active main {
   max-width: 720px;
-  padding: 1rem 1rem calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom));
+  padding: 1rem 1rem calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset));
 }
 body.home-active nav {
   display: flex;
 }
 .home-dashboard {
-  min-height: calc(100vh - var(--bottom-overlay-offset));
+  min-height: calc(100dvh - var(--bottom-overlay-offset) - var(--browser-ui-bottom-offset));
   padding-top: calc(0.8rem + env(safe-area-inset-top));
 }
 .home-lp-hero {
@@ -1566,7 +1567,7 @@ nav button {
   body.home-active main {
     padding-left: max(0.9rem, env(safe-area-inset-left));
     padding-right: max(0.9rem, env(safe-area-inset-right));
-    padding-bottom: calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + 1.25rem);
+    padding-bottom: calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset) + 1.25rem);
   }
   h1 {
     font-size: 1.35rem;
@@ -2044,6 +2045,13 @@ nav button {
       <button class="btn btn-sm btn-outline" id="badge-view-earned" onclick="setAchievementView('earned')">獲得済み</button>
     </div>
     <div class="badge-grid" id="badge-grid"></div>
+  </div>
+
+  <div class="card">
+    <h2>記録データ</h2>
+    <p class="text-sm" style="line-height:1.7; margin-bottom:0.8rem;">本棚、セッション、メモ、問いへの回答、実績をJSONファイルに書き出します。スマホでは共有メニューからこのチャットへ添付できます。</p>
+    <button class="btn btn-outline" onclick="exportReadingData()">記録データを書き出す</button>
+    <div class="text-sm" id="export-data-status" style="display:none; margin-top:0.65rem; color:var(--success);"></div>
   </div>
 </div>
 
@@ -3140,10 +3148,15 @@ function getCurrentBookSelection() {
 }
 
 function updateLayoutOffsets() {
+  const vv = window.visualViewport;
+  const browserBottomOffset = vv
+    ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
+    : 0;
   const navHeight = document.getElementById('nav')?.offsetHeight || 56;
   const banner = document.getElementById('tiny-banner');
   const bannerVisible = !!banner && getComputedStyle(banner).display !== 'none';
   const bannerHeight = bannerVisible ? banner.offsetHeight + 12 : 0;
+  document.documentElement.style.setProperty('--browser-ui-bottom-offset', `${browserBottomOffset}px`);
   document.documentElement.style.setProperty('--nav-height', `${navHeight}px`);
   document.documentElement.style.setProperty('--bottom-overlay-offset', `${navHeight + bannerHeight + 24}px`);
 }
@@ -4011,6 +4024,93 @@ function answerQuiz(type) {
 }
 
 // ==================== 実績 ====================
+async function exportReadingData() {
+  const status = document.getElementById('export-data-status');
+  if (sessionStart) saveActiveSession();
+  DB.save(data);
+
+  const now = new Date();
+  const pad = value => String(value).padStart(2, '0');
+  const dateLabel = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+  const payload = {
+    format: 'virtual-library-data',
+    version: 1,
+    exportedAt: now.toISOString(),
+    summary: {
+      books: Array.isArray(data.books) ? data.books.length : 0,
+      sessions: sessions.length,
+      readingSessions: sessions.filter(s => !s.type || s.type === 'reading').length,
+      creativeSessions: sessions.filter(s => s.type === 'creative').length,
+      learningSessions: sessions.filter(s => s.type === 'learning').length,
+      totalProgressMinutes: sessions.reduce((sum, s) => sum + (Number(s.minutes) || 0), 0),
+      readingMinutes: Number(data.totalMinutes) || 0,
+      creativeMinutes: Number(data.creativeMinutes) || 0,
+      learningMinutes: Number(data.learningMinutes) || 0,
+      xp: Number(data.xp) || 0,
+      earnedBadges: Array.isArray(data.earnedBadges) ? data.earnedBadges.length : 0,
+    },
+    data,
+    activeSession: readActiveSession(),
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const fileName = `virtual-library-${dateLabel}.json`;
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+
+  if (status) {
+    status.style.display = 'none';
+    status.style.color = 'var(--success)';
+  }
+
+  try {
+    const file = typeof File === 'function' ? new File([blob], fileName, { type: blob.type }) : null;
+    let canShareFile = false;
+    if (file && navigator.share && navigator.canShare) {
+      try {
+        canShareFile = navigator.canShare({ files: [file] });
+      } catch (e) {
+        canShareFile = false;
+      }
+    }
+    if (canShareFile) {
+      await navigator.share({
+        title: '仮想図書館の記録データ',
+        text: '仮想図書館から書き出した読書・創作・学習の記録です。',
+        files: [file],
+      });
+      if (status) {
+        status.textContent = '記録データを共有しました';
+        status.style.display = 'block';
+      }
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    if (status) {
+      status.textContent = '記録データを書き出しました';
+      status.style.display = 'block';
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      if (status) {
+        status.textContent = '共有をキャンセルしました';
+        status.style.color = 'var(--text2)';
+        status.style.display = 'block';
+      }
+      return;
+    }
+    console.error('データの書き出しに失敗しました', error);
+    alert('記録データを書き出せませんでした。ブラウザを更新して、もう一度お試しください。');
+  }
+}
+
 function setAchievementView(view) {
   achievementView = view === 'earned' ? 'earned' : 'pending';
   updateAchievements();
@@ -4130,6 +4230,10 @@ window.addEventListener('resize', () => {
   updateLayoutOffsets();
   setHomePreviewZoom(homePreviewZoom);
 });
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateLayoutOffsets);
+  window.visualViewport.addEventListener('scroll', updateLayoutOffsets);
+}
 
 // ==================== PWA設定 ====================
 // インラインでマニフェストを生成（外部ファイル不要）
