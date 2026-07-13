@@ -372,22 +372,6 @@ h3 { font-size: 0.95rem; color: var(--text2); margin-bottom: 0.5rem; }
   color: rgba(240, 223, 192, 0.58);
   font-size: 0.66rem;
 }
-.library-calendar {
-  display: flex;
-  gap: 0.22rem;
-  justify-content: center;
-  margin-top: 0.75rem;
-}
-.streak-cup {
-  background: rgba(240, 223, 192, 0.18);
-  border-radius: 2px;
-  display: inline-block;
-  height: 7px;
-  width: 7px;
-}
-.streak-cup.read { background: var(--accent2); }
-.streak-cup.recovery { background: var(--silver); }
-.streak-cup.empty { background: rgba(240, 223, 192, 0.18); }
 /* ボタン */
 .btn {
   background: var(--accent);
@@ -688,8 +672,6 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
 }
 /* ストリーク */
 .streak-display { display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem; }
-.streak-cups { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.4rem; }
-.streak-cup { font-size: 1.3rem; }
 /* 問い */
 .question-card {
   background: var(--bg3);
@@ -755,9 +737,6 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
   .home-streak-detail {
     text-align: left;
     width: 100%;
-  }
-  .home-streak-panel .streak-cups {
-    justify-content: flex-start;
   }
   .isbn-actions .btn,
   #filter-bar .btn {
@@ -1355,17 +1334,91 @@ body.home-active nav {
   flex: 1;
   font-size: 0.82rem;
   line-height: 1.55;
-  text-align: right;
+  min-width: 0;
+  text-align: left;
 }
-.home-streak-panel .streak-cups {
-  justify-content: flex-end;
-  margin-top: 0.45rem;
+.streak-calendar-heading {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
+  margin-top: 0.6rem;
 }
-.home-streak-panel .streak-cup {
-  border-radius: 3px;
-  font-size: 0;
-  height: 9px;
-  width: 9px;
+.streak-calendar-heading strong {
+  color: rgba(240, 223, 192, 0.9);
+  font-size: 0.75rem;
+}
+.streak-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.62rem;
+  gap: 0.5rem;
+}
+.streak-legend-item {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.22rem;
+  white-space: nowrap;
+}
+.streak-legend-mark {
+  background: rgba(240, 223, 192, 0.08);
+  border: 1px solid rgba(240, 223, 192, 0.2);
+  border-radius: 2px;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+.streak-legend-mark.read { background: #2a9d8f; border-color: #75e0cf; }
+.streak-legend-mark.recovery { background: #b98428; border-color: #f5d17b; }
+.streak-calendar {
+  display: grid;
+  gap: 0.3rem;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-top: 0.42rem;
+}
+.streak-day {
+  align-items: center;
+  background: rgba(240, 223, 192, 0.035);
+  border: 1px solid rgba(240, 223, 192, 0.13);
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  height: 58px;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.2rem 0.05rem;
+}
+.streak-day.read {
+  background: rgba(42, 157, 143, 0.25);
+  border-color: rgba(117, 224, 207, 0.62);
+}
+.streak-day.recovery {
+  background: rgba(185, 132, 40, 0.22);
+  border-color: rgba(245, 209, 123, 0.58);
+}
+.streak-day.today { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.48); }
+.streak-day-week {
+  color: rgba(240, 223, 192, 0.55);
+  font-size: 0.56rem;
+  line-height: 1;
+}
+.streak-day strong {
+  color: rgba(240, 223, 192, 0.9);
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+.streak-day-status {
+  color: rgba(240, 223, 192, 0.52);
+  font-size: 0.55rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+.streak-day.read .streak-day-status { color: #9eeadd; }
+.streak-day.recovery .streak-day-status { color: #f5d98b; }
+@media (max-width: 380px) {
+  .streak-calendar { gap: 0.2rem; }
+  .streak-day { height: 54px; }
+  .streak-calendar-heading { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
 }
 .screen:not(#screen-home) {
   padding-top: calc(0.65rem + env(safe-area-inset-top));
@@ -1809,12 +1862,20 @@ nav button {
 
     <section class="home-streak-panel">
       <div class="home-streak-main">
-        <span class="home-streak-label">連続読書</span>
+        <span class="home-streak-label">連続記録</span>
         <span class="home-streak-days"><span id="home-streak-visible">0</span><small>日</small></span>
       </div>
       <div class="home-streak-detail">
         <div id="home-streak-note">今日のセッションで記録を始められます</div>
-        <div class="streak-cups" id="home-streak-cups" aria-label="直近14日の読書記録"></div>
+        <div class="streak-calendar-heading">
+          <strong>直近14日</strong>
+          <div class="streak-calendar-legend" aria-label="記録の凡例">
+            <span class="streak-legend-item"><i class="streak-legend-mark read" aria-hidden="true"></i>記録</span>
+            <span class="streak-legend-item"><i class="streak-legend-mark recovery" aria-hidden="true"></i>リカバリー</span>
+            <span class="streak-legend-item"><i class="streak-legend-mark" aria-hidden="true"></i>記録なし</span>
+          </div>
+        </div>
+        <div class="streak-calendar" id="home-streak-cups" role="list" aria-label="直近14日の活動記録"></div>
       </div>
     </section>
 
@@ -2154,7 +2215,7 @@ const DB = {
 
 // 既存データに新フィールドを安全にマージ
 const DEFAULT_LEARNING_GENRES = ['古典シリア語', 'データサイエンス講座', 'PCハードウェア', 'AI'];
-const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES };
+const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES };
 let data = Object.assign({}, _defaults, DB.load());
 if (!Array.isArray(data.quizAnswers)) data.quizAnswers = [];
 if (!Array.isArray(data.earnedBadges)) data.earnedBadges = [];
@@ -2163,6 +2224,12 @@ data.learningGenres = [
   ...DEFAULT_LEARNING_GENRES,
   ...data.learningGenres.filter(genre => !DEFAULT_LEARNING_GENRES.includes(genre)),
 ];
+// 35日分の獲得5個から、申告済みの使用約3個を差し引いた残数へ一度だけ補正する。
+if (data.recoveryRulesVersion < 2) {
+  if ((data.streak || 0) >= 35) data.recoveryTokens = 2;
+  data.recoveryRulesVersion = 2;
+  DB.save(data);
+}
 const ACTIVE_SESSION_KEY = 'dokusho_active_session';
 let timerInterval = null;
 let sessionStart = null;
@@ -2590,28 +2657,32 @@ function buildGoalProgressGradient(minutes, goal) {
 }
 
 function updateHome() {
-  // リカバリーチェック（2日以上空いた場合）
+  // 最終セッションと今日の間に空白日があれば、1日につき1個で補完する。
   if (data.lastSessionDate) {
-    const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-    if (data.lastSessionDate !== today && data.lastSessionDate !== yesterday) {
-      if ((data.recoveryTokens||0) > 0) {
-        if (confirm(`昨日は読めませんでした。リカバリー権（残り${data.recoveryTokens}回）を使って連続記録を守りますか？`)) {
-          data.recoveryTokens -= 1;
-          data.recoveryUsed = true;
-          const todayKey = new Date().toISOString().split('T')[0];
-          data.streakHistory[todayKey] = 'recovery';
-        } else {
-          // キャンセル時も今日の日付を記録し、再度ダイアログが出ないようにする
-        }
-        data.lastSessionDate = today;
+    const todayDate = startOfLocalDay(new Date());
+    const lastDate = startOfLocalDay(new Date(data.lastSessionDate));
+    const missedDays = Math.max(0, calendarDayNumber(todayDate) - calendarDayNumber(lastDate) - 1);
+    if (missedDays > 0) {
+      const availableTokens = data.recoveryTokens || 0;
+      const canRecover = availableTokens >= missedDays;
+      const useRecovery = canRecover && confirm(
+        `${missedDays}日分の記録が空いています。リカバリー権を${missedDays}個使って、休んだ日を連続記録として補完しますか？（残り${availableTokens}個）`
+      );
+
+      if (useRecovery) {
+        applyRecoveryDays(lastDate, missedDays);
+        const yesterdayDate = new Date(todayDate);
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        data.lastSessionDate = yesterdayDate.toDateString();
         checkBadges();
-        DB.save(data);
       } else {
-        // リカバリー権なし：ダイアログ再表示防止のため今日の日付を記録
-        data.lastSessionDate = today;
-        DB.save(data);
+        if (!canRecover && availableTokens > 0) {
+          alert(`空白の${missedDays}日を補完するにはリカバリー権が${missedDays}個必要です。現在は${availableTokens}個のため、次のセッションから新しい連続記録が始まります。`);
+        }
+        data.streak = 0;
+        data.lastSessionDate = null;
       }
+      DB.save(data);
     }
   }
 
@@ -2627,7 +2698,7 @@ function updateHome() {
   const streakNote = document.getElementById('home-streak-note');
   if (streakNote) {
     streakNote.textContent = data.streak > 0
-      ? `${data.streak}日連続でページを開いています。直近14日の足跡はこちら。`
+      ? `${data.streak}日連続で活動を記録中です。`
       : '今日のセッションで記録を始められます';
   }
 
@@ -2635,17 +2706,29 @@ function updateHome() {
   const recEl = document.getElementById('home-recovery');
   recEl.textContent = (data.recoveryTokens||0) > 0 ? `リカバリー ${data.recoveryTokens}` : '';
 
-  // カレンダーバー（直近14日）
+  // 2週間カレンダー（直近14日）
   const cups = document.getElementById('home-streak-cups');
   cups.innerHTML = '';
+  const todayDate = startOfLocalDay(new Date());
+  const weekdayLabels = ['日', '月', '火', '水', '木', '金', '土'];
   for (let i = 13; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000);
-    const key = d.toISOString().split('T')[0];
+    const d = new Date(todayDate);
+    d.setDate(d.getDate() - i);
+    const key = getLocalDateKey(d);
     const state = data.streakHistory?.[key];
-    const span = document.createElement('span');
-    span.className = 'streak-cup ' + (state === 'read' ? 'read' : state === 'recovery' ? 'recovery' : 'empty');
-    span.title = key;
-    cups.appendChild(span);
+    const statusClass = state === 'read' ? 'read' : state === 'recovery' ? 'recovery' : 'empty';
+    const statusLabel = state === 'read' ? '記録' : state === 'recovery' ? '補完' : 'なし';
+    const fullStatusLabel = state === 'read' ? 'セッション記録あり' : state === 'recovery' ? 'リカバリーで補完' : '記録なし';
+    const cell = document.createElement('div');
+    cell.className = `streak-day ${statusClass}${i === 0 ? ' today' : ''}`;
+    cell.setAttribute('role', 'listitem');
+    cell.setAttribute('aria-label', `${d.getMonth() + 1}月${d.getDate()}日 ${weekdayLabels[d.getDay()]}曜日、${fullStatusLabel}${i === 0 ? '、今日' : ''}`);
+    cell.innerHTML = `
+      <span class="streak-day-week">${weekdayLabels[d.getDay()]}</span>
+      <strong>${d.getDate()}</strong>
+      <span class="streak-day-status">${statusLabel}</span>
+    `;
+    cups.appendChild(cell);
   }
 
   // 今日の積みウィジェット
@@ -3572,6 +3655,59 @@ function updateTimer() {
   document.getElementById('timer-display').textContent = `${m}:${s}`;
 }
 
+function startOfLocalDay(value) {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function calendarDayNumber(value) {
+  const date = new Date(value);
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
+}
+
+function getLocalDateKey(value) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function grantRecoveryTokenAtMilestone() {
+  if (data.streak > 0 && data.streak % 7 === 0) {
+    data.recoveryTokens = (data.recoveryTokens || 0) + 1;
+  }
+}
+
+function applyRecoveryDays(lastDate, missedDays) {
+  data.recoveryTokens = (data.recoveryTokens || 0) - missedDays;
+  data.recoveryUsed = true;
+  if (!data.streakHistory) data.streakHistory = {};
+  for (let dayOffset = 1; dayOffset <= missedDays; dayOffset++) {
+    const recoveredDate = new Date(lastDate);
+    recoveredDate.setDate(recoveredDate.getDate() + dayOffset);
+    data.streak = (data.streak || 0) + 1;
+    data.streakHistory[getLocalDateKey(recoveredDate)] = 'recovery';
+    grantRecoveryTokenAtMilestone();
+  }
+}
+
+function updateStreakAfterSession() {
+  const today = new Date().toDateString();
+  const todayKey = getLocalDateKey(new Date());
+  let streakAdvanced = false;
+  if (data.lastSessionDate !== today) {
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    data.streak = data.lastSessionDate === yesterday ? data.streak + 1 : 1;
+    data.lastSessionDate = today;
+    streakAdvanced = true;
+  }
+  if (!data.streakHistory) data.streakHistory = {};
+  data.streakHistory[todayKey] = 'read';
+  if (streakAdvanced) grantRecoveryTokenAtMilestone();
+}
+
 function addManualSession() {
   const manualInput = document.getElementById('manual-minutes');
   const minutes = Math.max(0, parseInt(manualInput?.value || '0', 10));
@@ -3604,19 +3740,7 @@ function addManualSession() {
   const previousXp = data.xp;
   data.xp += xpGained;
 
-  const today = new Date().toDateString();
-  const todayKey = new Date().toISOString().split('T')[0];
-  if (data.lastSessionDate !== today) {
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-    data.streak = data.lastSessionDate === yesterday ? data.streak + 1 : 1;
-    data.lastSessionDate = today;
-  }
-  if (!data.streakHistory) data.streakHistory = {};
-  data.streakHistory[todayKey] = 'read';
-  if (data.streak > 0 && data.streak % 7 === 0) {
-    const prevStreak = data.streak - 1;
-    if (prevStreak % 7 !== 0) data.recoveryTokens = (data.recoveryTokens||0) + 1;
-  }
+  updateStreakAfterSession();
   if (bookId) data.lastUsedBookId = bookId;
 
   const newBadges = checkBadges();
@@ -3729,22 +3853,7 @@ function endSession() {
   data.xp += xpGained;
 
   // ストリーク計算
-  const today = new Date().toDateString();
-  const todayKey = new Date().toISOString().split('T')[0];
-  if (data.lastSessionDate !== today) {
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-    data.streak = data.lastSessionDate === yesterday ? data.streak + 1 : 1;
-    data.lastSessionDate = today;
-  }
-  // streakHistoryに記録
-  if (!data.streakHistory) data.streakHistory = {};
-  data.streakHistory[todayKey] = 'read';
-
-  // 7の倍数でリカバリートークン付与
-  if (data.streak > 0 && data.streak % 7 === 0) {
-    const prevStreak = data.streak - 1;
-    if (prevStreak % 7 !== 0) data.recoveryTokens = (data.recoveryTokens||0) + 1;
-  }
+  updateStreakAfterSession();
 
   // lastUsed更新
   if (bookId) data.lastUsedBookId = bookId;
@@ -4243,6 +4352,7 @@ function renderLevelDetails() {
     { value: `${data.sessions.length}回`, label: '全セッション' },
     { value: formatProgressMinutes(totalMinutes), label: '総進捗時間' },
     { value: `${data.streak || 0}日`, label: '現在の連続記録' },
+    { value: `${data.recoveryTokens || 0}個`, label: 'リカバリー権（7日ごとに+1）' },
     { value: `${allTimeActiveDays(data)}日`, label: '通算記録日数' },
     { value: `${data.books.length}冊`, label: '登録した本' },
     { value: formatProgressMinutes(data.totalMinutes), label: '読書時間' },
