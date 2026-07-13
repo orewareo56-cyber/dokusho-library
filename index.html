@@ -2899,11 +2899,11 @@ async function getBarcodeDetectorClass(status) {
     barcodeFallbackPromise = (async () => {
       status.textContent = 'Safari対応の読み取り機能を準備しています...';
       await loadBarcodeFallbackScript(
-        'https://cdn.jsdelivr.net/npm/@undecaf/zbar-wasm@0.9.16/dist/index.js',
+        'assets/vendor/barcode/zbar-wasm.js',
         () => Boolean(window.zbarWasm)
       );
       await loadBarcodeFallbackScript(
-        'https://cdn.jsdelivr.net/npm/@undecaf/barcode-detector-polyfill@0.9.23/dist/index.js',
+        'assets/vendor/barcode/barcode-detector-polyfill.js',
         () => Boolean(window.barcodeDetectorPolyfill?.BarcodeDetectorPolyfill)
       );
       const detectorClass = window.barcodeDetectorPolyfill?.BarcodeDetectorPolyfill;
@@ -2933,7 +2933,7 @@ async function startBarcodeScan() {
   } catch (error) {
     console.error('バーコード解析機能の読み込みに失敗しました', error);
     stopBarcodeScan();
-    alert('Safari対応の読み取り機能を準備できませんでした。通信環境を確認して、もう一度お試しください。');
+    alert('Safari対応の読み取り機能を準備できませんでした。ページを再読み込みして、もう一度お試しください。');
     return;
   }
 
