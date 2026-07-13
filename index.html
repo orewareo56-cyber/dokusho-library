@@ -2215,7 +2215,7 @@ const DB = {
 
 // 既存データに新フィールドを安全にマージ
 const DEFAULT_LEARNING_GENRES = ['古典シリア語', 'データサイエンス講座', 'PCハードウェア', 'AI'];
-const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES };
+const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistoryVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES };
 let data = Object.assign({}, _defaults, DB.load());
 if (!Array.isArray(data.quizAnswers)) data.quizAnswers = [];
 if (!Array.isArray(data.earnedBadges)) data.earnedBadges = [];
@@ -2230,6 +2230,12 @@ if (data.recoveryRulesVersion < 2) {
   data.recoveryRulesVersion = 2;
   DB.save(data);
 }
+// 旧仕様でUTC側にずれた直近14日の足跡を一度だけ復元する。
+if (data.streakHistoryVersion < 2) {
+  rebuildRecentStreakHistory();
+  data.streakHistoryVersion = 2;
+  DB.save(data);
+}
 const ACTIVE_SESSION_KEY = 'dokusho_active_session';
 let timerInterval = null;
 let sessionStart = null;
@@ -2242,6 +2248,7 @@ let currentBookFilter = 'all';
 let editingBookId = null;
 let barcodeStream = null;
 let barcodeScanTimer = null;
+let barcodeFallbackPromise = null;
 let homePreviewZoom = parseFloat(localStorage.getItem('home_preview_zoom') || '1') || 1;
 
 function setHomePreviewZoom(value) {
@@ -2866,30 +2873,81 @@ async function lookupBookByIsbn(isbnValue) {
   }
 }
 
+function loadBarcodeFallbackScript(src, readyCheck) {
+  return new Promise((resolve, reject) => {
+    if (readyCheck()) {
+      resolve();
+      return;
+    }
+    const existing = document.querySelector(`script[data-barcode-fallback="${src}"]`);
+    if (existing) {
+      existing.remove();
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.dataset.barcodeFallback = src;
+    script.onload = () => readyCheck() ? resolve() : reject(new Error('barcode fallback did not initialize'));
+    script.onerror = () => reject(new Error(`failed to load ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function getBarcodeDetectorClass(status) {
+  if ('BarcodeDetector' in window) return window.BarcodeDetector;
+  if (!barcodeFallbackPromise) {
+    barcodeFallbackPromise = (async () => {
+      status.textContent = 'Safari対応の読み取り機能を準備しています...';
+      await loadBarcodeFallbackScript(
+        'https://cdn.jsdelivr.net/npm/@undecaf/zbar-wasm@0.9.16/dist/index.js',
+        () => Boolean(window.zbarWasm)
+      );
+      await loadBarcodeFallbackScript(
+        'https://cdn.jsdelivr.net/npm/@undecaf/barcode-detector-polyfill@0.9.23/dist/index.js',
+        () => Boolean(window.barcodeDetectorPolyfill?.BarcodeDetectorPolyfill)
+      );
+      const detectorClass = window.barcodeDetectorPolyfill?.BarcodeDetectorPolyfill;
+      if (!detectorClass) throw new Error('barcode fallback is unavailable');
+      return detectorClass;
+    })().catch(error => {
+      barcodeFallbackPromise = null;
+      throw error;
+    });
+  }
+  return barcodeFallbackPromise;
+}
+
 async function startBarcodeScan() {
   const status = document.getElementById('barcode-status');
   const panel = document.getElementById('barcode-panel');
   const video = document.getElementById('barcode-video');
-  if (!('BarcodeDetector' in window)) {
-    alert('このブラウザではバーコード読み取りに対応していません。ISBN入力を使ってください。');
-    return;
-  }
   if (!navigator.mediaDevices?.getUserMedia) {
     alert('カメラを利用できません。ISBN入力を使ってください。');
     return;
   }
   stopBarcodeScan();
   panel.style.display = 'block';
+  let DetectorClass;
+  try {
+    DetectorClass = await getBarcodeDetectorClass(status);
+  } catch (error) {
+    console.error('バーコード解析機能の読み込みに失敗しました', error);
+    stopBarcodeScan();
+    alert('Safari対応の読み取り機能を準備できませんでした。通信環境を確認して、もう一度お試しください。');
+    return;
+  }
+
   status.textContent = 'カメラを起動しています...';
   try {
     barcodeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     video.srcObject = barcodeStream;
     await video.play();
-    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+    const detector = new DetectorClass({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
     const scan = async () => {
       if (!barcodeStream) return;
       try {
         const codes = await detector.detect(video);
+        if (!barcodeStream) return;
         if (codes.length > 0) {
           const raw = codes[0].rawValue || '';
           document.getElementById('book-isbn').value = raw;
@@ -3672,6 +3730,27 @@ function getLocalDateKey(value) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function rebuildRecentStreakHistory() {
+  const streakDays = Math.max(0, Number(data.streak) || 0);
+  if (!data.lastSessionDate || streakDays === 0) return;
+  if (!data.streakHistory) data.streakHistory = {};
+
+  const sessionDates = new Set(
+    (Array.isArray(data.sessions) ? data.sessions : [])
+      .filter(session => session?.date)
+      .map(session => getLocalDateKey(new Date(session.date)))
+  );
+  const lastRecordedDate = startOfLocalDay(new Date(data.lastSessionDate));
+  const repairDays = Math.min(14, streakDays);
+
+  for (let offset = 0; offset < repairDays; offset++) {
+    const date = new Date(lastRecordedDate);
+    date.setDate(date.getDate() - offset);
+    const key = getLocalDateKey(date);
+    data.streakHistory[key] = sessionDates.has(key) ? 'read' : 'recovery';
+  }
 }
 
 function grantRecoveryTokenAtMilestone() {
