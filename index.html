@@ -28,6 +28,7 @@
   --bottom-overlay-offset: 88px;
   --browser-ui-bottom-offset: 0px;
   --library-bg-image: url('assets/medieval-islamic-library-bg.png');
+  --library-bg-image-mobile: url('assets/backgrounds/mobile/medieval-islamic-library.webp');
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-padding-bottom: calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset)); }
@@ -1073,6 +1074,17 @@ body.home-active {
     var(--library-bg-image) center / cover no-repeat;
   background-color: #080604;
 }
+@media (max-width: 720px) {
+  body,
+  body.home-active {
+    background:
+      radial-gradient(circle at 50% 9%, rgba(232, 160, 32, 0.12), transparent 25%),
+      linear-gradient(180deg, rgba(8, 6, 4, 0.08), rgba(8, 6, 4, 0.2) 48%, rgba(8, 6, 4, 0.7)),
+      var(--library-bg-image-mobile) center top / contain no-repeat fixed,
+      var(--library-bg-image-mobile) center / cover no-repeat fixed;
+    background-color: #080604;
+  }
+}
 body.home-active main {
   max-width: 720px;
   padding: 1rem 1rem calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset));
@@ -1121,6 +1133,47 @@ body.home-active nav {
 .home-lp-subtitle::after {
   color: var(--accent2);
   content: "✧";
+}
+.home-background-picker {
+  align-items: end;
+  background: rgba(10, 8, 6, 0.64);
+  border: 1px solid rgba(232, 160, 32, 0.34);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin: 1rem auto 0;
+  max-width: 520px;
+  padding: 0.65rem;
+  text-align: left;
+}
+.home-background-picker label {
+  color: rgba(245, 217, 139, 0.9);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.28rem;
+}
+.home-background-picker select {
+  background: rgba(7, 6, 5, 0.76);
+  border-color: rgba(232, 160, 32, 0.4);
+  color: var(--text);
+  margin: 0;
+}
+.home-background-random {
+  background: linear-gradient(180deg, rgba(26, 151, 139, 0.88), rgba(5, 103, 99, 0.9));
+  border: 1px solid rgba(245, 209, 123, 0.52);
+  border-radius: 6px;
+  color: #ffe7a6;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  white-space: nowrap;
+}
+.home-background-place {
+  color: rgba(240, 223, 192, 0.66);
+  font-size: 0.66rem;
+  margin-top: 0.35rem;
 }
 .home-console {
   background:
@@ -1415,10 +1468,154 @@ body.home-active nav {
 }
 .streak-day.read .streak-day-status { color: #9eeadd; }
 .streak-day.recovery .streak-day-status { color: #f5d98b; }
+.home-recovery-status {
+  align-items: center;
+  background: rgba(185, 132, 40, 0.14);
+  border: 1px solid rgba(245, 209, 123, 0.28);
+  border-radius: 6px;
+  color: #f5d98b;
+  display: flex;
+  font-size: 0.72rem;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  padding: 0.38rem 0.52rem;
+}
+.streak-day.progress-0 { background: rgba(240, 223, 192, 0.035); border-color: rgba(240, 223, 192, 0.13); }
+.streak-day.progress-1 { background: #173f3d; border-color: #35716c; }
+.streak-day.progress-2 { background: #17685f; border-color: #55aa9d; }
+.streak-day.progress-3 { background: #277d57; border-color: #68bd82; }
+.streak-day.progress-4 { background: #78802e; border-color: #bcc55d; }
+.streak-day.progress-5 { background: #9b6d25; border-color: #e6b45b; }
+.streak-day.progress-6 { background: #a84d30; border-color: #ed8b6c; }
+.streak-day.progress-7 { background: #8d345a; border-color: #d8789d; }
+.streak-day.progress-8 { background: #263f92; border-color: #728be5; }
+.streak-day[class*="progress-"] .streak-day-status { color: rgba(255, 250, 232, 0.92); }
+.streak-progress-legend {
+  display: grid;
+  gap: 0.25rem 0.45rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 0.55rem;
+}
+.streak-progress-legend .streak-legend-item {
+  color: rgba(240, 223, 192, 0.68);
+  font-size: 0.56rem;
+}
+.streak-progress-legend .streak-legend-mark.progress-0 { background: rgba(240, 223, 192, 0.08); }
+.streak-progress-legend .streak-legend-mark.progress-1 { background: #173f3d; border-color: #35716c; }
+.streak-progress-legend .streak-legend-mark.progress-2 { background: #17685f; border-color: #55aa9d; }
+.streak-progress-legend .streak-legend-mark.progress-3 { background: #277d57; border-color: #68bd82; }
+.streak-progress-legend .streak-legend-mark.progress-4 { background: #78802e; border-color: #bcc55d; }
+.streak-progress-legend .streak-legend-mark.progress-5 { background: #9b6d25; border-color: #e6b45b; }
+.streak-progress-legend .streak-legend-mark.progress-6 { background: #a84d30; border-color: #ed8b6c; }
+.streak-progress-legend .streak-legend-mark.progress-7 { background: #8d345a; border-color: #d8789d; }
+.streak-progress-legend .streak-legend-mark.progress-8 { background: #263f92; border-color: #728be5; }
+.home-activity-dashboard {
+  background: rgba(16, 12, 8, 0.78);
+  border: 1px solid rgba(232, 160, 32, 0.32);
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(0,0,0,0.3);
+  margin-top: 1rem;
+  padding: 0.95rem;
+}
+.home-activity-dashboard h2 {
+  color: #f1d287;
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
+}
+.home-dashboard-copy {
+  color: rgba(240, 223, 192, 0.66);
+  font-size: 0.7rem;
+  margin-bottom: 0.75rem;
+}
+.dashboard-block + .dashboard-block { margin-top: 0.9rem; }
+.dashboard-block h3 {
+  color: rgba(240, 223, 192, 0.9);
+  font-size: 0.82rem;
+  margin-bottom: 0.42rem;
+}
+.dashboard-table-wrap,
+.activity-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.dashboard-table,
+.activity-table {
+  border-collapse: collapse;
+  font-size: 0.68rem;
+  min-width: 560px;
+  width: 100%;
+}
+.dashboard-table th,
+.dashboard-table td,
+.activity-table th,
+.activity-table td {
+  border: 1px solid rgba(240, 223, 192, 0.12);
+  padding: 0.42rem 0.48rem;
+  text-align: center;
+}
+.dashboard-table th,
+.activity-table th {
+  background: rgba(232, 160, 32, 0.09);
+  color: #f1d287;
+  font-weight: 600;
+}
+.dashboard-table th:first-child,
+.dashboard-table td:first-child,
+.activity-table th:nth-child(3),
+.activity-table td:nth-child(3) {
+  max-width: 220px;
+  position: sticky;
+  left: 0;
+  text-align: left;
+}
+.dashboard-table td:first-child { background: #17120d; }
+.dashboard-table td.has-time {
+  background: rgba(42, 157, 143, 0.2);
+  color: #b8f0e7;
+  font-weight: 700;
+}
+.dashboard-empty,
+.activity-empty {
+  color: rgba(240, 223, 192, 0.58);
+  font-size: 0.74rem;
+  padding: 0.7rem 0;
+}
+.learning-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.65rem 0;
+}
+.learning-genre-row {
+  align-items: center;
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: minmax(120px, 1fr) 112px auto auto auto;
+  margin-bottom: 0.45rem;
+}
+.learning-genre-row input,
+.learning-genre-row select { margin: 0; }
+.activity-analysis-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+.activity-summary {
+  color: var(--text2);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  margin-bottom: 0.7rem;
+}
 @media (max-width: 380px) {
   .streak-calendar { gap: 0.2rem; }
   .streak-day { height: 54px; }
   .streak-calendar-heading { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
+}
+@media (max-width: 560px) {
+  .streak-progress-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .learning-genre-row { grid-template-columns: 1fr 104px; }
+  .learning-genre-row .btn { width: 100%; }
 }
 .screen:not(#screen-home) {
   padding-top: calc(0.65rem + env(safe-area-inset-top));
@@ -1602,6 +1799,11 @@ body.home-active nav {
     font-size: 1rem;
     min-height: 64px;
   }
+  .home-background-picker {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+  .home-background-random { width: 100%; }
 }
 
 /* Mobile usability polish */
@@ -1817,22 +2019,24 @@ nav button {
       <div class="home-lp-kicker">PRIVATE LIBRARY</div>
       <h1>仮想図書館</h1>
       <div class="home-lp-subtitle">今日ひらく一冊を選ぶ</div>
-    </header>
-
-    <section class="home-console">
-      <div class="home-console-title">続きから読む</div>
-      <div class="home-book-card">
-        <div class="home-book-cover" aria-hidden="true"></div>
-        <div class="home-book-fields" id="home-book-display">
-          <label for="home-book-select">本を選択</label>
-          <select id="home-book-select" onchange="setHomeBook(this.value)">
-            <option value="">本棚に本を追加してください</option>
+      <div class="home-background-picker">
+        <div>
+          <label for="home-background-select">学びの旅先</label>
+          <select id="home-background-select" onchange="setHistoricalBackground(this.value)">
+            <option value="islamic">中世イスラームの図書館</option>
+            <option value="greco-roman">古代ギリシア・ローマの図書館</option>
+            <option value="monastery">中世ヨーロッパの修道院写本室</option>
+            <option value="terakoya">江戸時代の寺子屋</option>
+            <option value="tang">唐代中国の書院</option>
+            <option value="baghdad">バグダードの知恵の館</option>
+            <option value="enlightenment">啓蒙時代の書斎</option>
+            <option value="renaissance">ルネサンス期イタリアの回廊書斎</option>
           </select>
-          <div class="home-book-meta">本棚と連動します</div>
+          <div class="home-background-place" id="home-background-place">中世イスラームの図書館を訪問中</div>
         </div>
+        <button class="home-background-random" onclick="chooseRandomHistoricalBackground()">気分で選ぶ</button>
       </div>
-      <button class="home-cta" onclick="showScreen('session')">セッションを始める</button>
-    </section>
+    </header>
 
     <section class="home-goal-section">
       <div class="home-goal-heading">今日の目標</div>
@@ -1843,6 +2047,7 @@ nav button {
         <button class="goal-chip" data-goal="120" onclick="setDailyGoal(120)">120<span>分</span></button>
         <button class="goal-chip" data-goal="180" onclick="setDailyGoal(180)">180<span>分</span></button>
         <button class="goal-chip" data-goal="300" onclick="setDailyGoal(300)">300<span>分</span></button>
+        <button class="goal-chip" id="goal-chip-600" data-goal="600" onclick="setDailyGoal(600)" style="display:none;">600<span>分</span></button>
       </div>
     </section>
 
@@ -1867,15 +2072,36 @@ nav button {
       </div>
       <div class="home-streak-detail">
         <div id="home-streak-note">今日のセッションで記録を始められます</div>
+        <div class="home-recovery-status" id="home-recovery-visible">リカバリー権 0個</div>
         <div class="streak-calendar-heading">
           <strong>直近14日</strong>
-          <div class="streak-calendar-legend" aria-label="記録の凡例">
-            <span class="streak-legend-item"><i class="streak-legend-mark read" aria-hidden="true"></i>記録</span>
-            <span class="streak-legend-item"><i class="streak-legend-mark recovery" aria-hidden="true"></i>リカバリー</span>
-            <span class="streak-legend-item"><i class="streak-legend-mark" aria-hidden="true"></i>記録なし</span>
-          </div>
+          <span class="streak-legend-item"><i class="streak-legend-mark recovery" aria-hidden="true"></i>リカバリー</span>
         </div>
         <div class="streak-calendar" id="home-streak-cups" role="list" aria-label="直近14日の活動記録"></div>
+        <div class="streak-progress-legend" aria-label="活動時間の色分け">
+          <span class="streak-legend-item"><i class="streak-legend-mark progress-0"></i>0分</span>
+          <span class="streak-legend-item"><i class="streak-legend-mark progress-1"></i>1〜15分</span>
+          <span class="streak-legend-item"><i class="streak-legend-mark progress-2"></i>15〜30分</span>
+          <span class="streak-legend-item"><i class="streak-legend-mark progress-3"></i>30〜60分</span>
+          <span class="streak-legend-item"><i class="streak-legend-mark progress-4"></i>60〜120分</span>
+          <span class="streak-legend-item"><i class="streak-legend-mark progress-5"></i>120〜180分</span>
+          <span class="streak-legend-item"><i class="streak-legend-mark progress-6"></i>180〜300分</span>
+          <span class="streak-legend-item"><i class="streak-legend-mark progress-7"></i>300〜600分</span>
+          <span class="streak-legend-item"><i class="streak-legend-mark progress-8"></i>600分以上</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="home-activity-dashboard">
+      <h2>日毎の活動ダッシュボード</h2>
+      <div class="home-dashboard-copy">直近7日間の本・学習ジャンルごとの記録時間</div>
+      <div class="dashboard-block">
+        <h3>本ごとの時間</h3>
+        <div class="dashboard-table-wrap" id="home-book-dashboard"></div>
+      </div>
+      <div class="dashboard-block">
+        <h3>学習ジャンルごとの時間</h3>
+        <div class="dashboard-table-wrap" id="home-learning-dashboard"></div>
       </div>
     </section>
 
@@ -1935,10 +2161,10 @@ nav button {
   </div>
 
   <div id="filter-bar" class="flex mb0" style="margin-bottom:0.8rem; flex-wrap:wrap; gap:0.4rem;">
-    <button class="btn btn-sm btn-outline" onclick="filterBooks('all')">すべて</button>
-    <button class="btn btn-sm btn-outline" onclick="filterBooks('reading')">読書中</button>
-    <button class="btn btn-sm btn-outline" onclick="filterBooks('tsundoku')">積読</button>
-    <button class="btn btn-sm btn-outline" onclick="filterBooks('done')">読了</button>
+    <button class="btn btn-sm btn-outline" data-book-filter="all" onclick="filterBooks('all')">すべて</button>
+    <button class="btn btn-sm" data-book-filter="reading" onclick="filterBooks('reading')">読書中</button>
+    <button class="btn btn-sm btn-outline" data-book-filter="tsundoku" onclick="filterBooks('tsundoku')">積読</button>
+    <button class="btn btn-sm btn-outline" data-book-filter="done" onclick="filterBooks('done')">読了</button>
   </div>
 
   <ul class="book-list" id="book-list"></ul>
@@ -1953,7 +2179,7 @@ nav button {
       <h2>セッション種別</h2>
       <div class="session-mode-toggle">
         <button class="btn active" id="session-mode-reading" onclick="setSessionMode('reading')">読書</button>
-        <button class="btn btn-outline" id="session-mode-creative" onclick="setSessionMode('creative')">クリエイティブ作業</button>
+        <button class="btn btn-outline" id="session-mode-creative" onclick="setSessionMode('creative')">創造</button>
         <button class="btn btn-outline" id="session-mode-learning" onclick="setSessionMode('learning')">学習</button>
       </div>
     </div>
@@ -2011,6 +2237,12 @@ nav button {
       <label for="learning-genre-input">新しいジャンルを追加</label>
       <input type="text" id="learning-genre-input" maxlength="30" placeholder="例：古典シリア語、データサイエンス、PCハードウェア、AI">
       <button class="btn btn-outline btn-sm" onclick="addLearningGenre()">ジャンルを追加</button>
+      <div class="learning-filter-bar" id="learning-filter-bar">
+        <button class="btn btn-sm btn-outline" data-learning-filter="all" onclick="filterLearningGenres('all')">すべて</button>
+        <button class="btn btn-sm" data-learning-filter="active" onclick="filterLearningGenres('active')">学習中</button>
+        <button class="btn btn-sm btn-outline" data-learning-filter="planned" onclick="filterLearningGenres('planned')">学習予定</button>
+        <button class="btn btn-sm btn-outline" data-learning-filter="done" onclick="filterLearningGenres('done')">完了</button>
+      </div>
       <div id="learning-genre-manager" style="margin-top:0.8rem;"></div>
       <label for="learning-session-note">今日学ぶこと（任意）</label>
       <textarea id="learning-session-note" maxlength="140" rows="3"
@@ -2173,6 +2405,19 @@ nav button {
     <button class="btn btn-outline" onclick="exportReadingData()">記録データを書き出す</button>
     <div class="text-sm" id="export-data-status" style="display:none; margin-top:0.65rem; color:var(--success);"></div>
   </div>
+
+  <div class="card">
+    <h2>日毎・時間帯別の活動データ</h2>
+    <p class="text-sm" style="line-height:1.7; margin-bottom:0.8rem;">読書・学習・創作の内容と時間帯を振り返り、傾向分析に使えます。</p>
+    <div class="activity-analysis-controls">
+      <button class="btn btn-sm" data-activity-days="7" onclick="setActivityAnalysisDays(7)">7日</button>
+      <button class="btn btn-sm btn-outline" data-activity-days="14" onclick="setActivityAnalysisDays(14)">14日</button>
+      <button class="btn btn-sm btn-outline" data-activity-days="30" onclick="setActivityAnalysisDays(30)">30日</button>
+      <button class="btn btn-sm btn-outline" data-activity-days="0" onclick="setActivityAnalysisDays(0)">全期間</button>
+    </div>
+    <div class="activity-summary" id="activity-analysis-summary"></div>
+    <div class="activity-table-wrap" id="activity-analysis-table"></div>
+  </div>
 </div>
 
 </main>
@@ -2208,6 +2453,7 @@ const DB = {
       creativeMinutes: 0,
       learningMinutes: 0,
       learningGenres: ['古典シリア語', 'データサイエンス講座', 'PCハードウェア', 'AI'],
+      learningGenreStatuses: {},
     };
   },
   save(data) { localStorage.setItem('dokusho_data', JSON.stringify(data)); }
@@ -2215,8 +2461,10 @@ const DB = {
 
 // 既存データに新フィールドを安全にマージ
 const DEFAULT_LEARNING_GENRES = ['古典シリア語', 'データサイエンス講座', 'PCハードウェア', 'AI'];
-const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistoryVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES };
+const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistoryVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES, learningGenreStatuses: {} };
 let data = Object.assign({}, _defaults, DB.load());
+if (!Array.isArray(data.books)) data.books = [];
+if (!Array.isArray(data.sessions)) data.sessions = [];
 if (!Array.isArray(data.quizAnswers)) data.quizAnswers = [];
 if (!Array.isArray(data.earnedBadges)) data.earnedBadges = [];
 if (!Array.isArray(data.learningGenres) || data.learningGenres.length === 0) data.learningGenres = [...DEFAULT_LEARNING_GENRES];
@@ -2224,6 +2472,12 @@ data.learningGenres = [
   ...DEFAULT_LEARNING_GENRES,
   ...data.learningGenres.filter(genre => !DEFAULT_LEARNING_GENRES.includes(genre)),
 ];
+if (!data.learningGenreStatuses || typeof data.learningGenreStatuses !== 'object') data.learningGenreStatuses = {};
+data.learningGenres.forEach(genre => {
+  if (!['active', 'planned', 'done'].includes(data.learningGenreStatuses[genre])) {
+    data.learningGenreStatuses[genre] = 'active';
+  }
+});
 // 35日分の獲得5個から、申告済みの使用約3個を差し引いた残数へ一度だけ補正する。
 if (data.recoveryRulesVersion < 2) {
   if ((data.streak || 0) >= 35) data.recoveryTokens = 2;
@@ -2244,12 +2498,83 @@ let pauseStarted = null;
 let pausedTotal = 0;
 let sessionMode = 'reading';
 let achievementView = 'pending';
-let currentBookFilter = 'all';
+let currentBookFilter = 'reading';
+let currentLearningGenreFilter = 'active';
+let activityAnalysisDays = 7;
 let editingBookId = null;
 let barcodeStream = null;
 let barcodeScanTimer = null;
 let barcodeFallbackPromise = null;
 let homePreviewZoom = parseFloat(localStorage.getItem('home_preview_zoom') || '1') || 1;
+const HISTORICAL_BACKGROUNDS = [
+  {
+    id: 'islamic',
+    label: '中世イスラームの図書館',
+    image: 'assets/medieval-islamic-library-bg.png',
+    mobileImage: 'assets/backgrounds/mobile/medieval-islamic-library.webp'
+  },
+  {
+    id: 'greco-roman',
+    label: '古代ギリシア・ローマの図書館',
+    image: 'assets/backgrounds/ancient-greco-roman-library.png',
+    mobileImage: 'assets/backgrounds/mobile/ancient-greco-roman-library.webp'
+  },
+  {
+    id: 'monastery',
+    label: '中世ヨーロッパの修道院写本室',
+    image: 'assets/backgrounds/medieval-monastery-scriptorium.png',
+    mobileImage: 'assets/backgrounds/mobile/medieval-monastery-scriptorium.webp'
+  },
+  {
+    id: 'terakoya',
+    label: '江戸時代の寺子屋',
+    image: 'assets/backgrounds/edo-terakoya.png',
+    mobileImage: 'assets/backgrounds/mobile/edo-terakoya.webp'
+  },
+  {
+    id: 'tang',
+    label: '唐代中国の書院',
+    image: 'assets/backgrounds/tang-academy-library.png',
+    mobileImage: 'assets/backgrounds/mobile/tang-academy-library.webp'
+  },
+  {
+    id: 'baghdad',
+    label: 'バグダードの知恵の館',
+    image: 'assets/backgrounds/abbasid-house-of-wisdom.png',
+    mobileImage: 'assets/backgrounds/mobile/abbasid-house-of-wisdom.webp'
+  },
+  {
+    id: 'enlightenment',
+    label: '啓蒙時代の書斎',
+    image: 'assets/backgrounds/enlightenment-study-library.png',
+    mobileImage: 'assets/backgrounds/mobile/enlightenment-study-library.webp'
+  },
+  {
+    id: 'renaissance',
+    label: 'ルネサンス期イタリアの回廊書斎',
+    image: 'assets/backgrounds/renaissance-loggia-study.webp',
+    mobileImage: 'assets/backgrounds/mobile/renaissance-loggia-study.webp'
+  },
+];
+let historicalBackgroundId = localStorage.getItem('historical_background_id') || 'islamic';
+
+function setHistoricalBackground(id, persist = true) {
+  const background = HISTORICAL_BACKGROUNDS.find(item => item.id === id) || HISTORICAL_BACKGROUNDS[0];
+  historicalBackgroundId = background.id;
+  document.documentElement.style.setProperty('--library-bg-image', `url('${background.image}')`);
+  document.documentElement.style.setProperty('--library-bg-image-mobile', `url('${background.mobileImage}')`);
+  const select = document.getElementById('home-background-select');
+  if (select) select.value = background.id;
+  const place = document.getElementById('home-background-place');
+  if (place) place.textContent = `${background.label}を訪問中`;
+  if (persist) localStorage.setItem('historical_background_id', background.id);
+}
+
+function chooseRandomHistoricalBackground() {
+  const alternatives = HISTORICAL_BACKGROUNDS.filter(item => item.id !== historicalBackgroundId);
+  const choice = alternatives[Math.floor(Math.random() * alternatives.length)] || HISTORICAL_BACKGROUNDS[0];
+  setHistoricalBackground(choice.id);
+}
 
 function setHomePreviewZoom(value) {
   homePreviewZoom = Math.min(2.5, Math.max(0.5, Math.round(value * 10) / 10));
@@ -2462,7 +2787,6 @@ const BADGES = [
   { id: 'daily_30', name: '半刻の集中', desc: '1日に30分以上読書・創作・学習', progressFn: d => ({ current: maxDailyMinutes(d), max: 30 }) },
   { id: 'daily_goal_3', name: '目標達成の三日月', desc: '1日の目標時間を3日達成', progressFn: d => ({ current: dailyGoalDays(d), max: 3 }) },
   { id: 'manual_1', name: 'あとから記録', desc: '手入力で学習時間を1回記録', progressFn: d => ({ current: manualSessionCount(d), max: 1 }) },
-  { id: 'tiny_5', name: '一ページの連鎖', desc: '1ページモードを5回完了', progressFn: d => ({ current: d.tinyCount || 0, max: 5 }) },
   { id: 'book_variety_3', name: '三冊を渡る読者', desc: '3冊以上の本でセッションを記録', progressFn: d => ({ current: bookVariety(d), max: 3 }) },
   { id: 'genre_variety_3', name: '三分野の窓', desc: '3ジャンル以上でセッションを記録', progressFn: d => ({ current: genreVariety(d), max: 3 }) },
   { id: 'session_memo_5', name: '収穫の余白', desc: 'セッションメモを5件保存', progressFn: d => ({ current: memoCount(d), max: 5 }) },
@@ -2472,9 +2796,9 @@ const BADGES = [
   { id: 'weekly_quiz_3', name: 'ウィークリーミッション: 問い3つ', desc: '直近7日で問いに3回回答', progressFn: d => ({ current: quizAnswersSinceDays(d, 7), max: 3 }) },
   { id: 'monthly_sessions_12', name: 'マンスリーミッション: 12回通う', desc: '直近30日で12セッション', progressFn: d => ({ current: sessionsSinceDays(d, 30).length, max: 12 }) },
   { id: 'monthly_minutes_600', name: 'マンスリーミッション: 600分', desc: '直近30日で読書・創作・学習600分', progressFn: d => ({ current: minutesSinceDays(d, 30), max: 600 }) },
-  { id: 'creative_1', name: '最初の工房入り', desc: 'クリエイティブ作業セッションを1回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 1 }) },
-  { id: 'creative_5', name: '構想を編む手', desc: 'クリエイティブ作業セッションを5回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 5 }) },
-  { id: 'creative_20', name: '制作習慣の設計者', desc: 'クリエイティブ作業セッションを20回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 20 }) },
+  { id: 'creative_1', name: '最初の工房入り', desc: '創造セッションを1回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 1 }) },
+  { id: 'creative_5', name: '構想を編む手', desc: '創造セッションを5回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 5 }) },
+  { id: 'creative_20', name: '制作習慣の設計者', desc: '創造セッションを20回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 20 }) },
   { id: 'creative_minutes_120', name: '二時間の試作', desc: '創作時間を合計120分記録', progressFn: d => ({ current: creativeMinutes(d), max: 120 }) },
   { id: 'creative_minutes_600', name: '十時間の工房', desc: '創作時間を合計600分記録', progressFn: d => ({ current: creativeMinutes(d), max: 600 }) },
   { id: 'creative_game_3', name: 'ゲーム構想家', desc: 'ゲーム構想セッションを3回完了', progressFn: d => ({ current: creativeTypeCount(d, 'game'), max: 3 }) },
@@ -2625,7 +2949,10 @@ function showScreen(id) {
     initSessionSetup();
   }
   if (id === 'quiz') initQuizScreen();
-  if (id === 'achievements') updateAchievements();
+  if (id === 'achievements') {
+    updateAchievements();
+    renderActivityAnalysis();
+  }
   updateLayoutOffsets();
 }
 
@@ -2661,6 +2988,91 @@ function buildGoalProgressGradient(minutes, goal) {
   }
 
   return `linear-gradient(90deg, ${stops.join(', ')})`;
+}
+
+function getProgressTier(minutes) {
+  const value = Math.max(0, Number(minutes) || 0);
+  if (value === 0) return { className: 'progress-0', shortLabel: '0分', fullLabel: '記録なし' };
+  if (value <= 15) return { className: 'progress-1', shortLabel: `${value}分`, fullLabel: `1〜15分（${value}分）` };
+  if (value <= 30) return { className: 'progress-2', shortLabel: `${value}分`, fullLabel: `15〜30分（${value}分）` };
+  if (value <= 60) return { className: 'progress-3', shortLabel: `${value}分`, fullLabel: `30〜60分（${value}分）` };
+  if (value <= 120) return { className: 'progress-4', shortLabel: `${value}分`, fullLabel: `60〜120分（${value}分）` };
+  if (value <= 180) return { className: 'progress-5', shortLabel: `${value}分`, fullLabel: `120〜180分（${value}分）` };
+  if (value <= 300) return { className: 'progress-6', shortLabel: `${value}分`, fullLabel: `180〜300分（${value}分）` };
+  if (value <= 600) return { className: 'progress-7', shortLabel: `${value}分`, fullLabel: `300〜600分（${value}分）` };
+  return { className: 'progress-8', shortLabel: `${value}分`, fullLabel: `600分以上（${value}分）` };
+}
+
+function getRecentDateColumns(days) {
+  const today = startOfLocalDay(new Date());
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(date.getDate() - (days - index - 1));
+    return {
+      key: getLocalDateKey(date),
+      label: `${date.getMonth() + 1}/${date.getDate()}`,
+      weekday: ['日', '月', '火', '水', '木', '金', '土'][date.getDay()],
+    };
+  });
+}
+
+function renderDashboardMatrix(targetId, rows, dates, emptyMessage) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const visibleRows = rows.filter(row => Object.values(row.minutes).some(value => value > 0));
+  if (visibleRows.length === 0) {
+    target.innerHTML = `<div class="dashboard-empty">${emptyMessage}</div>`;
+    return;
+  }
+  target.innerHTML = `
+    <table class="dashboard-table">
+      <thead><tr><th>項目</th>${dates.map(date => `<th>${date.label}<br>${date.weekday}</th>`).join('')}</tr></thead>
+      <tbody>
+        ${visibleRows.map(row => `
+          <tr>
+            <td>${escapeHtml(row.label)}</td>
+            ${dates.map(date => {
+              const minutes = row.minutes[date.key] || 0;
+              return `<td class="${minutes > 0 ? 'has-time' : ''}">${minutes > 0 ? `${minutes}分` : '—'}</td>`;
+            }).join('')}
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderHomeActivityDashboard() {
+  const dates = getRecentDateColumns(7);
+  const dateKeys = new Set(dates.map(date => date.key));
+  const bookRows = data.books.map(book => ({ label: book.title, id: book.id, minutes: {} }));
+  const bookMap = new Map(bookRows.map(row => [String(row.id), row]));
+  const learningRows = data.learningGenres.map(genre => ({ label: genre, minutes: {} }));
+  const learningMap = new Map(learningRows.map(row => [row.label, row]));
+
+  data.sessions.forEach(session => {
+    if (!session?.date) return;
+    const key = getLocalDateKey(new Date(session.date));
+    if (!dateKeys.has(key)) return;
+    const minutes = Math.max(0, Number(session.minutes) || 0);
+    if (session.bookId && bookMap.has(String(session.bookId))) {
+      const row = bookMap.get(String(session.bookId));
+      row.minutes[key] = (row.minutes[key] || 0) + minutes;
+    }
+    if (session.type === 'learning') {
+      const genre = session.learningGenre || session.genre || '学習';
+      if (!learningMap.has(genre)) {
+        const row = { label: genre, minutes: {} };
+        learningRows.push(row);
+        learningMap.set(genre, row);
+      }
+      const row = learningMap.get(genre);
+      row.minutes[key] = (row.minutes[key] || 0) + minutes;
+    }
+  });
+
+  renderDashboardMatrix('home-book-dashboard', bookRows, dates, '直近7日間の本の記録はありません');
+  renderDashboardMatrix('home-learning-dashboard', learningRows, dates, '直近7日間の学習記録はありません');
 }
 
 function updateHome() {
@@ -2712,20 +3124,34 @@ function updateHome() {
   // リカバリー権表示
   const recEl = document.getElementById('home-recovery');
   recEl.textContent = (data.recoveryTokens||0) > 0 ? `リカバリー ${data.recoveryTokens}` : '';
+  const visibleRecovery = document.getElementById('home-recovery-visible');
+  if (visibleRecovery) {
+    visibleRecovery.textContent = `◆ リカバリー権 ${data.recoveryTokens || 0}個`;
+    visibleRecovery.title = '連続記録が7日増えるごとに1個獲得します';
+  }
 
   // 2週間カレンダー（直近14日）
   const cups = document.getElementById('home-streak-cups');
   cups.innerHTML = '';
   const todayDate = startOfLocalDay(new Date());
   const weekdayLabels = ['日', '月', '火', '水', '木', '金', '土'];
+  const dailyMinutes = {};
+  data.sessions.forEach(session => {
+    if (!session?.date) return;
+    const key = getLocalDateKey(new Date(session.date));
+    dailyMinutes[key] = (dailyMinutes[key] || 0) + (Number(session.minutes) || 0);
+  });
   for (let i = 13; i >= 0; i--) {
     const d = new Date(todayDate);
     d.setDate(d.getDate() - i);
     const key = getLocalDateKey(d);
     const state = data.streakHistory?.[key];
-    const statusClass = state === 'read' ? 'read' : state === 'recovery' ? 'recovery' : 'empty';
-    const statusLabel = state === 'read' ? '記録' : state === 'recovery' ? '補完' : 'なし';
-    const fullStatusLabel = state === 'read' ? 'セッション記録あり' : state === 'recovery' ? 'リカバリーで補完' : '記録なし';
+    const minutes = dailyMinutes[key] || 0;
+    const tier = getProgressTier(minutes);
+    const isRecovery = state === 'recovery' && minutes === 0;
+    const statusClass = isRecovery ? 'recovery' : tier.className;
+    const statusLabel = isRecovery ? '補完' : tier.shortLabel;
+    const fullStatusLabel = isRecovery ? 'リカバリー権で補完' : tier.fullLabel;
     const cell = document.createElement('div');
     cell.className = `streak-day ${statusClass}${i === 0 ? ' today' : ''}`;
     cell.setAttribute('role', 'listitem');
@@ -2742,8 +3168,13 @@ function updateHome() {
   const today2 = new Date().toDateString();
   const todaySessions = data.sessions.filter(s => new Date(s.date).toDateString() === today2);
   const todayMinutes = todaySessions.reduce((sum, s) => sum + s.minutes, 0);
-  const allowedGoals = [15, 30, 60, 120, 180, 300];
-  const goal = allowedGoals.includes(data.dailyGoalMinutes) ? data.dailyGoalMinutes : 60;
+  const canShowGoal600 = todayMinutes > 300;
+  const goal600Chip = document.getElementById('goal-chip-600');
+  if (goal600Chip) goal600Chip.style.display = canShowGoal600 ? '' : 'none';
+  const allowedGoals = canShowGoal600 ? [15, 30, 60, 120, 180, 300, 600] : [15, 30, 60, 120, 180, 300];
+  const goal = allowedGoals.includes(data.dailyGoalMinutes)
+    ? data.dailyGoalMinutes
+    : data.dailyGoalMinutes === 600 ? 300 : 60;
   data.dailyGoalMinutes = goal;
   const rawProg = Math.round((todayMinutes / goal) * 100);
   const dispProg = Math.min(rawProg, 100);
@@ -2773,36 +3204,7 @@ function updateHome() {
     c.classList.toggle('active', Number(c.dataset.goal) === goal);
   });
 
-  // 続きから読む本
-  const candidates = data.books.filter(b => b.status !== 'done');
-  const bookDiv = document.getElementById('home-book-display');
-  if (candidates.length > 0) {
-    const lastSessionWithBook = [...data.sessions].reverse().find(s => s.bookId);
-    const lastSessionBookId = lastSessionWithBook?.bookId || null;
-    const selected = candidates.find(b => b.id === data.lastUsedBookId)
-      || candidates.find(b => b.id === lastSessionBookId)
-      || candidates.find(b => b.status === 'reading')
-      || candidates[0];
-    data.lastUsedBookId = selected.id;
-    const options = candidates.map(b => `
-      <option value="${b.id}" ${b.id === selected.id ? 'selected' : ''}>${b.title}</option>
-    `).join('');
-    bookDiv.innerHTML = `
-      <label for="home-book-select">本を選択</label>
-      <select id="home-book-select" onchange="setHomeBook(this.value)">
-        ${options}
-      </select>
-      <div class="home-book-meta">${selected.author || '著者不明'}${selected.genre ? ` ／ ${selected.genre}` : ''}</div>
-    `;
-  } else {
-    bookDiv.innerHTML = `
-      <label for="home-book-select">本を選択</label>
-      <select id="home-book-select" disabled>
-        <option>本棚に本を追加してください</option>
-      </select>
-      <div class="home-book-meta">本棚と連動します</div>
-    `;
-  }
+  renderHomeActivityDashboard();
 
   // 統計
   document.getElementById('stat-sessions').textContent = data.sessions.length;
@@ -2812,6 +3214,11 @@ function updateHome() {
 }
 
 function setDailyGoal(min) {
+  const todayKey = new Date().toDateString();
+  const todayMinutes = data.sessions
+    .filter(session => new Date(session.date).toDateString() === todayKey)
+    .reduce((sum, session) => sum + (Number(session.minutes) || 0), 0);
+  if (min === 600 && todayMinutes <= 300) return;
   data.dailyGoalMinutes = min;
   DB.save(data);
   updateHome();
@@ -2983,10 +3390,19 @@ function stopBarcodeScan(hidePanel = true) {
   if (hidePanel) document.getElementById('barcode-panel').style.display = 'none';
 }
 
-function filterBooks(f) { currentBookFilter = f; renderBookList(); }
+function filterBooks(f) {
+  currentBookFilter = ['all', 'reading', 'tsundoku', 'done'].includes(f) ? f : 'reading';
+  renderBookList();
+}
 
 function renderBookList() {
   const list = document.getElementById('book-list');
+  document.querySelectorAll('[data-book-filter]').forEach(button => {
+    const active = button.dataset.bookFilter === currentBookFilter;
+    button.classList.toggle('btn-outline', !active);
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
   list.innerHTML = '';
   let books = data.books;
   if (currentBookFilter !== 'all') books = books.filter(b => b.status === currentBookFilter);
@@ -3206,9 +3622,25 @@ function renderLearningGenreOptions(selected = '') {
   if (!Array.isArray(data.learningGenres) || data.learningGenres.length === 0) {
     data.learningGenres = [...DEFAULT_LEARNING_GENRES];
   }
-  sel.innerHTML = data.learningGenres.map(genre => `
+  const activeGenres = data.learningGenres.filter(genre => getLearningGenreStatus(genre) === 'active');
+  if (activeGenres.length === 0) {
+    sel.innerHTML = '<option value="">学習中のジャンルがありません</option>';
+    renderLearningGenreManager();
+    return;
+  }
+  sel.innerHTML = activeGenres.map(genre => `
     <option value="${escapeHtml(genre)}" ${genre === selected ? 'selected' : ''}>${escapeHtml(genre)}</option>
   `).join('');
+  renderLearningGenreManager();
+}
+
+function getLearningGenreStatus(genre) {
+  const status = data.learningGenreStatuses?.[genre];
+  return ['active', 'planned', 'done'].includes(status) ? status : 'active';
+}
+
+function filterLearningGenres(filter) {
+  currentLearningGenreFilter = ['all', 'active', 'planned', 'done'].includes(filter) ? filter : 'active';
   renderLearningGenreManager();
 }
 
@@ -3216,16 +3648,36 @@ function renderLearningGenreManager() {
   const wrap = document.getElementById('learning-genre-manager');
   if (!wrap) return;
   const genres = Array.isArray(data.learningGenres) ? data.learningGenres : [];
+  document.querySelectorAll('[data-learning-filter]').forEach(button => {
+    const active = button.dataset.learningFilter === currentLearningGenreFilter;
+    button.classList.toggle('btn-outline', !active);
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
   if (genres.length === 0) {
     wrap.innerHTML = '<p class="text-sm">ジャンルを追加すると、ここで編集できます</p>';
     return;
   }
+  const filteredGenres = genres
+    .map((genre, index) => ({ genre, index, status: getLearningGenreStatus(genre) }))
+    .filter(item => currentLearningGenreFilter === 'all' || item.status === currentLearningGenreFilter);
+  if (filteredGenres.length === 0) {
+    const label = { active: '学習中', planned: '学習予定', done: '完了', all: '登録済み' }[currentLearningGenreFilter];
+    wrap.innerHTML = `<p class="text-sm">${label}のジャンルはありません</p>`;
+    return;
+  }
   wrap.innerHTML = `
     <div class="text-sm" style="margin-bottom:0.45rem;">登録済みジャンル</div>
-    ${genres.map((genre, index) => `
-      <div class="flex" style="gap:0.4rem; margin-bottom:0.45rem; align-items:center;">
+    ${filteredGenres.map(({ genre, index, status }) => `
+      <div class="learning-genre-row">
         <input type="text" id="learning-genre-edit-${index}" value="${escapeHtml(genre)}" maxlength="30" aria-label="${escapeHtml(genre)}を編集">
+        <select aria-label="${escapeHtml(genre)}の状態" onchange="changeLearningGenreStatus(${index}, this.value)">
+          <option value="active" ${status === 'active' ? 'selected' : ''}>学習中</option>
+          <option value="planned" ${status === 'planned' ? 'selected' : ''}>学習予定</option>
+          <option value="done" ${status === 'done' ? 'selected' : ''}>完了</option>
+        </select>
         <button class="btn btn-outline btn-sm" onclick="editLearningGenre(${index})">更新</button>
+        <button class="btn btn-outline btn-sm" onclick="completeLearningGenre(${index})" ${status === 'done' ? 'disabled' : ''}>完了</button>
         <button class="btn btn-danger btn-sm" onclick="deleteLearningGenre(${index})">削除</button>
       </div>
     `).join('')}
@@ -3242,8 +3694,11 @@ function addLearningGenre() {
   if (!Array.isArray(data.learningGenres)) data.learningGenres = [];
   if (!data.learningGenres.includes(genre)) {
     data.learningGenres.push(genre);
+    if (!data.learningGenreStatuses) data.learningGenreStatuses = {};
+    data.learningGenreStatuses[genre] = 'active';
     DB.save(data);
   }
+  currentLearningGenreFilter = 'active';
   renderLearningGenreOptions(genre);
   input.value = '';
 }
@@ -3263,6 +3718,9 @@ function editLearningGenre(index) {
     return;
   }
   data.learningGenres[index] = newGenre;
+  if (!data.learningGenreStatuses) data.learningGenreStatuses = {};
+  data.learningGenreStatuses[newGenre] = getLearningGenreStatus(oldGenre);
+  if (newGenre !== oldGenre) delete data.learningGenreStatuses[oldGenre];
   data.sessions.forEach(session => {
     if (session.type === 'learning' && session.learningGenre === oldGenre) {
       session.learningGenre = newGenre;
@@ -3271,6 +3729,20 @@ function editLearningGenre(index) {
   });
   DB.save(data);
   renderLearningGenreOptions(newGenre);
+}
+
+function changeLearningGenreStatus(index, status) {
+  if (!Array.isArray(data.learningGenres) || !data.learningGenres[index]) return;
+  if (!['active', 'planned', 'done'].includes(status)) return;
+  const genre = data.learningGenres[index];
+  if (!data.learningGenreStatuses) data.learningGenreStatuses = {};
+  data.learningGenreStatuses[genre] = status;
+  DB.save(data);
+  renderLearningGenreOptions();
+}
+
+function completeLearningGenre(index) {
+  changeLearningGenreStatus(index, 'done');
 }
 
 function deleteLearningGenre(index) {
@@ -3282,8 +3754,10 @@ function deleteLearningGenre(index) {
   const genre = data.learningGenres[index];
   if (!confirm(`「${genre}」を削除しますか？過去の学習記録は残ります。`)) return;
   data.learningGenres.splice(index, 1);
+  if (data.learningGenreStatuses) delete data.learningGenreStatuses[genre];
   DB.save(data);
-  renderLearningGenreOptions(data.learningGenres[Math.max(0, index - 1)] || data.learningGenres[0] || '');
+  const nextActive = data.learningGenres.find(item => getLearningGenreStatus(item) === 'active') || '';
+  renderLearningGenreOptions(nextActive);
 }
 
 function updateSessionModeUI() {
@@ -3606,7 +4080,12 @@ function startSession() {
   const mode = ['creative', 'learning'].includes(sessionMode) ? sessionMode : 'reading';
   const bookId = mode === 'learning' ? '' : bookSel.value;
   const creativeType = document.getElementById('creative-work-type')?.value || 'game';
-  const learningGenre = document.getElementById('learning-genre-select')?.value || data.learningGenres?.[0] || '学習';
+  const learningGenre = document.getElementById('learning-genre-select')?.value || '';
+  if (mode === 'learning' && !learningGenre) {
+    alert('「学習中」のジャンルを追加または選択してください');
+    sessionStart = null;
+    return;
+  }
   sessionStart = Date.now();
   document.getElementById('session-setup').style.display = 'none';
   document.getElementById('session-running').style.display = 'block';
@@ -3756,7 +4235,15 @@ function rebuildRecentStreakHistory() {
 function grantRecoveryTokenAtMilestone() {
   if (data.streak > 0 && data.streak % 7 === 0) {
     data.recoveryTokens = (data.recoveryTokens || 0) + 1;
+    queueCelebration({
+      kicker: 'リカバリー権獲得',
+      title: '連続記録を守る権利',
+      body: `7日間の継続でリカバリー権を1個獲得しました。現在 ${data.recoveryTokens}個です。`,
+      duration: 3200,
+    });
+    return true;
   }
+  return false;
 }
 
 function applyRecoveryDays(lastDate, missedDays) {
@@ -4401,6 +4888,108 @@ async function exportReadingData() {
   }
 }
 
+function getTimeBand(date) {
+  const hour = date.getHours();
+  if (hour < 5) return '深夜（0〜4時）';
+  if (hour < 12) return '朝（5〜11時）';
+  if (hour < 18) return '昼（12〜17時）';
+  return '夜（18〜23時）';
+}
+
+function getSessionContent(session) {
+  if (session.type === 'learning') {
+    return session.learningGenre || session.genre || '学習';
+  }
+  if (session.type === 'creative') {
+    const creativeLabel = CREATIVE_TYPE_LABELS[session.creativeType] || '創造';
+    const book = data.books.find(item => item.id === session.bookId);
+    return book ? `${creativeLabel} ／ ${book.title}` : creativeLabel;
+  }
+  const book = data.books.find(item => item.id === session.bookId);
+  return book?.title || session.genre || '読書';
+}
+
+function getSessionDetailNote(session) {
+  if (session.type === 'learning') return session.learningNote || '';
+  if (session.type === 'creative') return session.creativeNote || '';
+  return session.memo || session.preNote || '';
+}
+
+function setActivityAnalysisDays(days) {
+  activityAnalysisDays = [0, 7, 14, 30].includes(days) ? days : 7;
+  renderActivityAnalysis();
+}
+
+function renderActivityAnalysis() {
+  const tableTarget = document.getElementById('activity-analysis-table');
+  const summaryTarget = document.getElementById('activity-analysis-summary');
+  if (!tableTarget || !summaryTarget) return;
+  document.querySelectorAll('[data-activity-days]').forEach(button => {
+    const active = Number(button.dataset.activityDays) === activityAnalysisDays;
+    button.classList.toggle('btn-outline', !active);
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+
+  const cutoff = activityAnalysisDays > 0
+    ? startOfLocalDay(new Date(Date.now() - (activityAnalysisDays - 1) * 86400000)).getTime()
+    : 0;
+  const sessions = data.sessions
+    .filter(session => session?.date && new Date(session.date).getTime() >= cutoff)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (sessions.length === 0) {
+    summaryTarget.textContent = '';
+    tableTarget.innerHTML = '<div class="activity-empty">この期間の活動記録はありません</div>';
+    return;
+  }
+
+  const dailyTotals = {};
+  const bandTotals = {};
+  sessions.forEach(session => {
+    const date = new Date(session.date);
+    const dayKey = getLocalDateKey(date);
+    const band = getTimeBand(date);
+    const minutes = Math.max(0, Number(session.minutes) || 0);
+    dailyTotals[dayKey] = (dailyTotals[dayKey] || 0) + minutes;
+    bandTotals[band] = (bandTotals[band] || 0) + minutes;
+  });
+  const totalMinutes = sessions.reduce((sum, session) => sum + (Number(session.minutes) || 0), 0);
+  const busiestDay = Object.entries(dailyTotals).sort((a, b) => b[1] - a[1])[0];
+  const busiestBand = Object.entries(bandTotals).sort((a, b) => b[1] - a[1])[0];
+  summaryTarget.innerHTML = `
+    合計 <strong>${totalMinutes}分</strong> ／ ${Object.keys(dailyTotals).length}日・${sessions.length}件<br>
+    最も長い日: <strong>${busiestDay[0]}（${busiestDay[1]}分）</strong> ／
+    最も長い時間帯: <strong>${busiestBand[0]}（${busiestBand[1]}分）</strong>
+  `;
+
+  const typeLabels = { reading: '読書', learning: '学習', creative: '創造' };
+  tableTarget.innerHTML = `
+    <table class="activity-table">
+      <thead>
+        <tr><th>日付</th><th>時刻・時間帯</th><th>内容</th><th>種別</th><th>時間</th><th>メモ</th></tr>
+      </thead>
+      <tbody>
+        ${sessions.map(session => {
+          const date = new Date(session.date);
+          const type = session.type || 'reading';
+          const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+          return `
+            <tr>
+              <td>${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}</td>
+              <td>${time}<br>${getTimeBand(date)}</td>
+              <td>${escapeHtml(getSessionContent(session))}</td>
+              <td>${typeLabels[type] || '読書'}</td>
+              <td>${Number(session.minutes) || 0}分</td>
+              <td>${escapeHtml(getSessionDetailNote(session)) || '—'}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
 function formatProgressMinutes(minutes) {
   const safeMinutes = Math.max(0, Number(minutes) || 0);
   const hours = Math.floor(safeMinutes / 60);
@@ -4550,6 +5139,7 @@ function updateAchievements() {
 }
 
 // ==================== 初期化 ====================
+setHistoricalBackground(historicalBackgroundId, false);
 setHomePreviewZoom(homePreviewZoom);
 updateLayoutOffsets();
 updateHome();
