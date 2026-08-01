@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#100c08">
+<title>活動ダッシュボード — 仮想図書館</title>
+<style>
+:root {
+  --bg: #080604;
+  --card: rgba(20, 15, 10, 0.9);
+  --card-soft: rgba(28, 21, 13, 0.72);
+  --border: rgba(232, 160, 32, 0.28);
+  --border-soft: rgba(240, 223, 192, 0.13);
+  --text: #f0dfc0;
+  --muted: rgba(240, 223, 192, 0.62);
+  --accent: #f1d287;
+  --reading: #5bbd9f;
+  --learning: #e8a020;
+  --creative: #b57ce8;
+  --plot: #67b7ff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(232, 160, 32, 0.14), transparent 34%),
+    linear-gradient(180deg, #100c08, var(--bg) 42%);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  min-height: 100vh;
+}
+button, select { font: inherit; }
+button, a, select { -webkit-tap-highlight-color: transparent; }
+.app-header {
+  background: rgba(8, 6, 4, 0.88);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.app-header-inner {
+  align-items: center;
+  display: flex;
+  gap: 0.8rem;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: 1040px;
+  min-height: 58px;
+  padding: calc(0.55rem + env(safe-area-inset-top)) 1rem 0.55rem;
+}
+.back-link {
+  align-items: center;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 0.82rem;
+  gap: 0.32rem;
+  text-decoration: none;
+}
+.app-title { color: var(--accent); font-size: 0.9rem; font-weight: 600; }
+.export-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--accent);
+  cursor: pointer;
+  min-height: 36px;
+  padding: 0.4rem 0.65rem;
+}
+main {
+  margin: 0 auto;
+  max-width: 1040px;
+  padding: 1.1rem 1rem calc(2rem + env(safe-area-inset-bottom));
+}
+.hero {
+  align-items: end;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.hero-kicker { color: var(--muted); font-size: 0.68rem; letter-spacing: 0.13em; margin-bottom: 0.3rem; }
+h1 { color: var(--accent); font-size: clamp(1.65rem, 5vw, 2.45rem); font-weight: 600; line-height: 1.25; }
+.hero-copy { color: var(--muted); font-size: 0.76rem; line-height: 1.6; margin-top: 0.35rem; }
+.period-controls {
+  background: rgba(8, 6, 4, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+}
+.period-button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  min-height: 36px;
+  min-width: 50px;
+  padding: 0.35rem 0.55rem;
+}
+.period-button.active {
+  background: rgba(232, 160, 32, 0.19);
+  color: var(--accent);
+}
+.summary-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 0.8rem;
+}
+.summary-card,
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+}
+.summary-card { padding: 0.8rem; }
+.summary-label { color: var(--muted); font-size: 0.68rem; }
+.summary-value { color: var(--accent); font-size: clamp(1.15rem, 4vw, 1.55rem); font-weight: 600; margin-top: 0.24rem; }
+.panel { margin-top: 0.8rem; padding: 0.9rem; }
+.panel-head {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
+  margin-bottom: 0.7rem;
+}
+h2 { color: var(--accent); font-size: 1rem; font-weight: 600; }
+.panel-copy { color: var(--muted); font-size: 0.68rem; margin-top: 0.2rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.55rem; }
+.legend-item { align-items: center; color: var(--muted); display: inline-flex; font-size: 0.68rem; gap: 0.28rem; }
+.legend-swatch { border-radius: 2px; display: inline-block; height: 8px; width: 8px; }
+.chart-wrap { min-height: 250px; overflow: hidden; position: relative; width: 100%; }
+.chart-wrap svg { display: block; height: auto; min-height: 250px; overflow: visible; width: 100%; }
+.chart-grid { stroke: var(--border-soft); stroke-width: 1; }
+.chart-axis-label { fill: var(--muted); font-size: 10px; }
+.chart-total-label { fill: var(--text); font-size: 9px; }
+.reading-fill { fill: var(--reading); }
+.learning-fill { fill: var(--learning); }
+.creative-fill { fill: var(--creative); }
+.trend-fill { fill: color-mix(in srgb, var(--plot) 14%, transparent); }
+.trend-line { fill: none; stroke: var(--plot); stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
+.trend-point { fill: var(--plot); stroke: var(--bg); stroke-width: 2; }
+.chart-empty {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 0.8rem;
+  justify-content: center;
+  min-height: 230px;
+  text-align: center;
+}
+.item-select {
+  background: rgba(8, 6, 4, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  max-width: 320px;
+  min-height: 40px;
+  padding: 0.45rem 2rem 0.45rem 0.6rem;
+  width: 100%;
+}
+.two-column {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.breakdown-list { display: grid; gap: 0.68rem; }
+.breakdown-row { display: grid; gap: 0.26rem; }
+.breakdown-label-row { align-items: baseline; display: flex; gap: 0.6rem; justify-content: space-between; }
+.breakdown-name { font-size: 0.76rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.breakdown-time { color: var(--muted); font-size: 0.68rem; white-space: nowrap; }
+.breakdown-track { background: rgba(240, 223, 192, 0.08); border-radius: 999px; height: 8px; overflow: hidden; }
+.breakdown-bar { border-radius: inherit; height: 100%; min-width: 2px; }
+.empty-copy { color: var(--muted); font-size: 0.76rem; padding: 0.7rem 0; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; font-size: 0.7rem; min-width: 720px; width: 100%; }
+th, td { border-bottom: 1px solid var(--border-soft); padding: 0.55rem 0.5rem; text-align: left; vertical-align: top; }
+th { color: var(--accent); font-weight: 600; }
+td { color: rgba(240, 223, 192, 0.82); }
+td.time { color: var(--accent); font-weight: 600; text-align: right; white-space: nowrap; }
+.type-pill { border: 1px solid currentColor; border-radius: 999px; display: inline-block; font-size: 0.6rem; padding: 0.12rem 0.38rem; }
+.type-reading { color: var(--reading); }
+.type-learning { color: var(--learning); }
+.type-creative { color: var(--creative); }
+.status { color: var(--muted); font-size: 0.7rem; margin-top: 0.45rem; min-height: 1em; text-align: right; }
+@media (max-width: 720px) {
+  .app-header-inner { min-height: 54px; }
+  .app-title { display: none; }
+  main { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .hero { align-items: stretch; flex-direction: column; }
+  .period-controls { align-self: flex-start; width: 100%; }
+  .period-button { flex: 1; min-width: 0; }
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .two-column { grid-template-columns: 1fr; }
+  .panel-head { align-items: stretch; flex-direction: column; }
+  .chart-wrap, .chart-wrap svg { min-height: 230px; }
+}
+@media (max-width: 390px) {
+  .export-button { font-size: 0.72rem; padding-inline: 0.5rem; }
+  .summary-card { padding: 0.7rem; }
+  .panel { padding: 0.75rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="back-link" href="index.html?screen=achievements"><span aria-hidden="true">‹</span> 実績に戻る</a>
+    <div class="app-title">仮想図書館</div>
+    <button class="export-button" type="button" id="export-button">記録を書き出す</button>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div>
+      <div class="hero-kicker">ACTIVITY ANALYSIS</div>
+      <h1>活動ダッシュボード</h1>
+      <p class="hero-copy">読書・学習・創作の時間と、項目ごとの積み上がりを振り返れます。</p>
+    </div>
+    <div class="period-controls" aria-label="集計期間">
+      <button class="period-button" type="button" data-days="7">7日</button>
+      <button class="period-button active" type="button" data-days="30">30日</button>
+      <button class="period-button" type="button" data-days="90">90日</button>
+      <button class="period-button" type="button" data-days="0">全期間</button>
+    </div>
+  </section>
+
+  <section class="summary-grid" id="summary-grid" aria-label="活動サマリー"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>活動時間の推移</h2>
+        <div class="panel-copy" id="overview-copy"></div>
+      </div>
+      <div class="legend" aria-label="活動種別">
+        <span class="legend-item"><i class="legend-swatch reading-fill"></i>読書</span>
+        <span class="legend-item"><i class="legend-swatch learning-fill"></i>学習</span>
+        <span class="legend-item"><i class="legend-swatch creative-fill"></i>創作</span>
+      </div>
+    </div>
+    <div class="chart-wrap" id="overview-chart"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>項目ごとの時間推移</h2>
+        <div class="panel-copy">本または学習項目を1つ選んで、日々の変化を確認できます。</div>
+      </div>
+      <label>
+        <span style="display:block; color:var(--muted); font-size:0.66rem; margin-bottom:0.24rem;">表示する項目</span>
+        <select class="item-select" id="item-select"></select>
+      </label>
+    </div>
+    <div class="chart-wrap" id="item-chart"></div>
+  </section>
+
+  <div class="two-column">
+    <section class="panel">
+      <div class="panel-head"><div><h2>本ごとの読書時間</h2><div class="panel-copy">選択期間の合計</div></div></div>
+      <div class="breakdown-list" id="book-breakdown"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><div><h2>学習項目ごとの時間</h2><div class="panel-copy">選択期間の合計</div></div></div>
+      <div class="breakdown-list" id="learning-breakdown"></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div><h2>記録明細</h2><div class="panel-copy" id="table-copy"></div></div>
+    </div>
+    <div class="table-wrap" id="activity-table"></div>
+    <div class="status" id="export-status" aria-live="polite"></div>
+  </section>
+</main>
+
+<script>
+const TYPE_LABELS = { reading: '読書', learning: '学習', creative: '創作' };
+const CREATIVE_LABELS = { game: 'ゲーム制作', writing: '執筆', art: '絵・デザイン', other: '創作' };
+const state = { days: 30, itemKey: '' };
+
+function loadData() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('dokusho_data') || 'null');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+const data = loadData();
+const books = Array.isArray(data.books) ? data.books : [];
+const rawSessions = Array.isArray(data.sessions) ? data.sessions : [];
+const sessions = rawSessions.map((session, index) => {
+  const date = new Date(session?.date);
+  const type = session?.type === 'learning' || session?.type === 'creative' ? session.type : 'reading';
+  return {
+    ...session,
+    _index: index,
+    _date: date,
+    _time: date.getTime(),
+    _type: type,
+    _minutes: Math.max(0, Number(session?.minutes) || 0),
+  };
+}).filter(session => Number.isFinite(session._time) && session._minutes > 0);
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+}
+
+function localDateKey(date) {
+  const pad = value => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function formatMinutes(value) {
+  const minutes = Math.max(0, Math.round(Number(value) || 0));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest}分`;
+  return rest ? `${hours}時間${rest}分` : `${hours}時間`;
+}
+
+function formatDate(date, includeYear = false) {
+  return includeYear
+    ? `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+    : `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function getFilteredSessions() {
+  if (!state.days) return [...sessions];
+  const today = startOfDay(new Date());
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() - (state.days - 1));
+  return sessions.filter(session => session._time >= cutoff.getTime());
+}
+
+function getBook(session) {
+  return books.find(book => String(book.id) === String(session.bookId));
+}
+
+function getContentLabel(session) {
+  if (session._type === 'learning') return session.learningGenre || session.genre || '学習';
+  if (session._type === 'creative') {
+    const label = CREATIVE_LABELS[session.creativeType] || '創作';
+    const book = getBook(session);
+    return book ? `${label} ／ ${book.title}` : label;
+  }
+  return getBook(session)?.title || session.genre || '読書';
+}
+
+function getNote(session) {
+  if (session._type === 'learning') return session.learningNote || '';
+  if (session._type === 'creative') return session.creativeNote || '';
+  return session.memo || session.preNote || '';
+}
+
+function startOfWeek(date) {
+  const result = startOfDay(date);
+  const mondayOffset = (result.getDay() + 6) % 7;
+  result.setDate(result.getDate() - mondayOffset);
+  return result;
+}
+
+function buildBuckets(filtered) {
+  const today = startOfDay(new Date());
+  let start;
+  if (state.days) {
+    start = new Date(today);
+    start.setDate(start.getDate() - (state.days - 1));
+  } else if (filtered.length) {
+    start = startOfDay(new Date(Math.min(...filtered.map(session => session._time))));
+  } else {
+    return [];
+  }
+  const spanDays = Math.max(1, Math.round((today - start) / 86400000) + 1);
+  const weekly = !state.days && spanDays > 120;
+  if (weekly) start = startOfWeek(start);
+  const buckets = [];
+  const cursor = new Date(start);
+  while (cursor <= today) {
+    const bucketDate = new Date(cursor);
+    buckets.push({
+      key: localDateKey(bucketDate),
+      date: bucketDate,
+      label: weekly ? `${bucketDate.getMonth() + 1}/${bucketDate.getDate()}週` : formatDate(bucketDate),
+      reading: 0,
+      learning: 0,
+      creative: 0,
+      item: 0,
+    });
+    cursor.setDate(cursor.getDate() + (weekly ? 7 : 1));
+  }
+  const bucketMap = new Map(buckets.map(bucket => [bucket.key, bucket]));
+  filtered.forEach(session => {
+    const keyDate = weekly ? startOfWeek(session._date) : startOfDay(session._date);
+    const bucket = bucketMap.get(localDateKey(keyDate));
+    if (bucket) bucket[session._type] += session._minutes;
+  });
+  return buckets;
+}
+
+function niceMaximum(value) {
+  if (value <= 30) return 30;
+  if (value <= 60) return 60;
+  if (value <= 120) return 120;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  return Math.ceil(value / magnitude * 2) / 2 * magnitude;
+}
+
+function renderSummary(filtered) {
+  const total = filtered.reduce((sum, session) => sum + session._minutes, 0);
+  const activeDays = new Set(filtered.map(session => localDateKey(session._date))).size;
+  const average = activeDays ? Math.round(total / activeDays) : 0;
+  const longest = filtered.reduce((max, session) => Math.max(max, session._minutes), 0);
+  const items = [
+    ['合計時間', formatMinutes(total)],
+    ['セッション', `${filtered.length}回`],
+    ['記録日数', `${activeDays}日`],
+    ['1日平均', formatMinutes(average)],
+  ];
+  document.getElementById('summary-grid').innerHTML = items.map(([label, value]) => `
+    <article class="summary-card"><div class="summary-label">${label}</div><div class="summary-value">${value}</div></article>
+  `).join('');
+}
+
+function xLabelIndexes(length) {
+  if (length <= 7) return new Set(Array.from({ length }, (_, index) => index));
+  const step = Math.max(1, Math.ceil(length / 6));
+  const indexes = new Set();
+  for (let index = 0; index < length; index += step) indexes.add(index);
+  indexes.add(length - 1);
+  return indexes;
+}
+
+function renderOverviewChart(filtered, buckets) {
+  const target = document.getElementById('overview-chart');
+  const weekly = buckets.length > 1 && (buckets[1].date - buckets[0].date) > 2 * 86400000;
+  document.getElementById('overview-copy').textContent = state.days ? `直近${state.days}日間／1日ごと` : (weekly ? '全期間／1週ごと' : '全期間／1日ごと');
+  if (!buckets.length || !filtered.length) {
+    target.innerHTML = '<div class="chart-empty">この期間の活動記録はありません</div>';
+    return;
+  }
+  const width = 760;
+  const height = 270;
+  const margin = { top: 22, right: 16, bottom: 34, left: 42 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const totals = buckets.map(bucket => bucket.reading + bucket.learning + bucket.creative);
+  const max = niceMaximum(Math.max(...totals));
+  const slot = plotWidth / buckets.length;
+  const barWidth = Math.max(2, Math.min(28, slot * 0.68));
+  const labels = xLabelIndexes(buckets.length);
+  const grid = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
+    const y = margin.top + plotHeight * (1 - ratio);
+    return `<line class="chart-grid" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"/><text class="chart-axis-label" x="${margin.left - 7}" y="${y + 3}" text-anchor="end">${Math.round(max * ratio)}</text>`;
+  }).join('');
+  const bars = buckets.map((bucket, index) => {
+    const x = margin.left + index * slot + (slot - barWidth) / 2;
+    let y = margin.top + plotHeight;
+    const segments = [
+      ['reading-fill', bucket.reading],
+      ['learning-fill', bucket.learning],
+      ['creative-fill', bucket.creative],
+    ].map(([className, value]) => {
+      const segmentHeight = value / max * plotHeight;
+      y -= segmentHeight;
+      return segmentHeight > 0 ? `<rect class="${className}" x="${x}" y="${y}" width="${barWidth}" height="${segmentHeight}" rx="2"><title>${bucket.label} ${formatMinutes(value)}</title></rect>` : '';
+    }).join('');
+    const label = labels.has(index) ? `<text class="chart-axis-label" x="${x + barWidth / 2}" y="${height - 10}" text-anchor="middle">${bucket.label}</text>` : '';
+    return `${segments}${label}`;
+  }).join('');
+  target.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="読書、学習、創作の時間推移。縦軸は分。"><title>活動時間の推移</title>${grid}${bars}<text class="chart-axis-label" x="8" y="14">分</text></svg>`;
+}
+
+function buildItemOptions() {
+  const options = [];
+  const seen = new Set();
+  books.forEach(book => {
+    const key = `book:${book.id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      options.push({ key, label: `本：${book.title}` });
+    }
+  });
+  const learningGenres = [
+    ...(Array.isArray(data.learningGenres) ? data.learningGenres : []),
+    ...sessions.filter(session => session._type === 'learning').map(session => session.learningGenre || session.genre || '学習'),
+  ];
+  learningGenres.forEach(genre => {
+    const key = `learning:${genre}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      options.push({ key, label: `学習：${genre}` });
+    }
+  });
+  return options;
+}
+
+function itemMatches(session, key) {
+  if (!key) return false;
+  if (key.startsWith('book:')) return session._type === 'reading' && String(session.bookId) === key.slice(5);
+  if (key.startsWith('learning:')) return session._type === 'learning' && (session.learningGenre || session.genre || '学習') === key.slice(9);
+  return false;
+}
+
+function renderItemSelector(options, filtered) {
+  const select = document.getElementById('item-select');
+  if (!options.length) {
+    state.itemKey = '';
+    select.innerHTML = '<option value="">表示できる項目がありません</option>';
+    select.disabled = true;
+    return;
+  }
+  select.disabled = false;
+  if (!options.some(option => option.key === state.itemKey)) {
+    const ranked = options.map(option => ({
+      ...option,
+      minutes: filtered.filter(session => itemMatches(session, option.key)).reduce((sum, session) => sum + session._minutes, 0),
+    })).sort((a, b) => b.minutes - a.minutes);
+    state.itemKey = ranked[0]?.key || options[0].key;
+  }
+  select.innerHTML = options.map(option => `<option value="${escapeHtml(option.key)}"${option.key === state.itemKey ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('');
+}
+
+function renderItemChart(filtered, buckets, options) {
+  const target = document.getElementById('item-chart');
+  if (!state.itemKey || !filtered.length || !buckets.length) {
+    target.innerHTML = '<div class="chart-empty">項目ごとの推移を表示する記録がありません</div>';
+    return;
+  }
+  const weekly = buckets.length > 1 && (buckets[1].date - buckets[0].date) > 2 * 86400000;
+  const valueMap = new Map(buckets.map(bucket => [bucket.key, 0]));
+  filtered.filter(session => itemMatches(session, state.itemKey)).forEach(session => {
+    const keyDate = weekly ? startOfWeek(session._date) : startOfDay(session._date);
+    const key = localDateKey(keyDate);
+    if (valueMap.has(key)) valueMap.set(key, valueMap.get(key) + session._minutes);
+  });
+  const values = buckets.map(bucket => valueMap.get(bucket.key) || 0);
+  const width = 760;
+  const height = 270;
+  const margin = { top: 25, right: 16, bottom: 34, left: 42 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const max = niceMaximum(Math.max(...values));
+  const step = values.length > 1 ? plotWidth / (values.length - 1) : plotWidth;
+  const points = values.map((value, index) => ({
+    x: values.length > 1 ? margin.left + index * step : margin.left + plotWidth / 2,
+    y: margin.top + plotHeight - value / max * plotHeight,
+    value,
+  }));
+  const path = points.map((point, index) => `${index ? 'L' : 'M'}${point.x},${point.y}`).join(' ');
+  const area = points.length ? `${path} L${points[points.length - 1].x},${margin.top + plotHeight} L${points[0].x},${margin.top + plotHeight} Z` : '';
+  const labels = xLabelIndexes(buckets.length);
+  const grid = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
+    const y = margin.top + plotHeight * (1 - ratio);
+    return `<line class="chart-grid" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"/><text class="chart-axis-label" x="${margin.left - 7}" y="${y + 3}" text-anchor="end">${Math.round(max * ratio)}</text>`;
+  }).join('');
+  const xLabels = buckets.map((bucket, index) => labels.has(index) ? `<text class="chart-axis-label" x="${points[index].x}" y="${height - 10}" text-anchor="middle">${bucket.label}</text>` : '').join('');
+  const dots = points.length <= 45 ? points.map((point, index) => `<circle class="trend-point" cx="${point.x}" cy="${point.y}" r="4"><title>${buckets[index].label} ${formatMinutes(point.value)}</title></circle>`).join('') : '';
+  const selectedLabel = options.find(option => option.key === state.itemKey)?.label || '';
+  target.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(selectedLabel)}の時間推移。縦軸は分。"><title>${escapeHtml(selectedLabel)}の時間推移</title>${grid}<path class="trend-fill" d="${area}"/><path class="trend-line" d="${path}"/>${dots}${xLabels}<text class="chart-axis-label" x="8" y="14">分</text></svg>`;
+}
+
+function aggregateBreakdown(filtered, type) {
+  const totals = new Map();
+  filtered.filter(session => session._type === type).forEach(session => {
+    let label;
+    if (type === 'reading') label = getBook(session)?.title || session.genre || '読書';
+    else label = session.learningGenre || session.genre || '学習';
+    totals.set(label, (totals.get(label) || 0) + session._minutes);
+  });
+  return [...totals.entries()].map(([label, minutes]) => ({ label, minutes })).sort((a, b) => b.minutes - a.minutes);
+}
+
+function renderBreakdown(targetId, rows, color) {
+  const target = document.getElementById(targetId);
+  if (!rows.length) {
+    target.innerHTML = '<div class="empty-copy">この期間の記録はありません</div>';
+    return;
+  }
+  const max = rows[0].minutes || 1;
+  target.innerHTML = rows.map(row => `
+    <div class="breakdown-row">
+      <div class="breakdown-label-row"><span class="breakdown-name">${escapeHtml(row.label)}</span><span class="breakdown-time">${formatMinutes(row.minutes)}</span></div>
+      <div class="breakdown-track"><div class="breakdown-bar" style="background:${color}; width:${Math.max(1, row.minutes / max * 100)}%"></div></div>
+    </div>
+  `).join('');
+}
+
+function renderTable(filtered) {
+  const target = document.getElementById('activity-table');
+  const sorted = [...filtered].sort((a, b) => b._time - a._time);
+  document.getElementById('table-copy').textContent = sorted.length > 100 ? `新しい順に100件／全${sorted.length}件` : `${sorted.length}件の記録`;
+  if (!sorted.length) {
+    target.innerHTML = '<div class="empty-copy">この期間の記録明細はありません</div>';
+    return;
+  }
+  target.innerHTML = `
+    <table>
+      <thead><tr><th>日付</th><th>種別</th><th>内容</th><th>メモ</th><th style="text-align:right;">時間</th></tr></thead>
+      <tbody>${sorted.slice(0, 100).map(session => `
+        <tr>
+          <td>${formatDate(session._date, true)}<br><span style="color:var(--muted);">${String(session._date.getHours()).padStart(2, '0')}:${String(session._date.getMinutes()).padStart(2, '0')}</span></td>
+          <td><span class="type-pill type-${session._type}">${TYPE_LABELS[session._type]}</span></td>
+          <td>${escapeHtml(getContentLabel(session))}</td>
+          <td>${escapeHtml(getNote(session)) || '—'}</td>
+          <td class="time">${formatMinutes(session._minutes)}</td>
+        </tr>
+      `).join('')}</tbody>
+    </table>
+  `;
+}
+
+function render() {
+  const filtered = getFilteredSessions();
+  const buckets = buildBuckets(filtered);
+  const options = buildItemOptions();
+  renderSummary(filtered);
+  renderOverviewChart(filtered, buckets);
+  renderItemSelector(options, filtered);
+  renderItemChart(filtered, buckets, options);
+  renderBreakdown('book-breakdown', aggregateBreakdown(filtered, 'reading'), 'var(--reading)');
+  renderBreakdown('learning-breakdown', aggregateBreakdown(filtered, 'learning'), 'var(--learning)');
+  renderTable(filtered);
+  document.querySelectorAll('[data-days]').forEach(button => {
+    const active = Number(button.dataset.days) === state.days;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+}
+
+function exportData() {
+  const now = new Date();
+  const pad = value => String(value).padStart(2, '0');
+  const fileName = `virtual-library-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.json`;
+  const payload = { format: 'virtual-library-data', version: 1, exportedAt: now.toISOString(), data };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+  document.getElementById('export-status').textContent = '記録データを書き出しました';
+}
+
+document.querySelectorAll('[data-days]').forEach(button => {
+  button.addEventListener('click', () => {
+    state.days = Number(button.dataset.days);
+    render();
+  });
+});
+document.getElementById('item-select').addEventListener('change', event => {
+  state.itemKey = event.target.value;
+  render();
+});
+document.getElementById('export-button').addEventListener('click', exportData);
+render();
+</script>
+</body>
+</html>

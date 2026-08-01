@@ -1071,7 +1071,7 @@ body.home-active {
   background:
     radial-gradient(circle at 50% 10%, rgba(232, 160, 32, 0.18), transparent 26%),
     linear-gradient(180deg, rgba(8, 6, 4, 0.18), rgba(8, 6, 4, 0.62) 45%, rgba(8, 6, 4, 0.9)),
-    var(--library-bg-image) center / cover no-repeat;
+    var(--library-bg-image) center top / cover no-repeat fixed;
   background-color: #080604;
 }
 @media (max-width: 720px) {
@@ -1080,7 +1080,6 @@ body.home-active {
     background:
       radial-gradient(circle at 50% 9%, rgba(232, 160, 32, 0.12), transparent 25%),
       linear-gradient(180deg, rgba(8, 6, 4, 0.08), rgba(8, 6, 4, 0.2) 48%, rgba(8, 6, 4, 0.7)),
-      var(--library-bg-image-mobile) center top / contain no-repeat fixed,
       var(--library-bg-image-mobile) center / cover no-repeat fixed;
     background-color: #080604;
   }
@@ -1097,6 +1096,11 @@ body.home-active nav {
   padding-top: calc(0.8rem + env(safe-area-inset-top));
 }
 .home-lp-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: clamp(330px, 48dvh, 510px);
+  position: relative;
   text-align: center;
   padding: 0.35rem 0 1.1rem;
 }
@@ -1135,29 +1139,35 @@ body.home-active nav {
   content: "✧";
 }
 .home-background-picker {
-  align-items: end;
+  align-items: center;
   background: rgba(10, 8, 6, 0.64);
   border: 1px solid rgba(232, 160, 32, 0.34);
   border-radius: 8px;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.35rem;
   grid-template-columns: minmax(0, 1fr) auto;
-  margin: 1rem auto 0;
-  max-width: 520px;
-  padding: 0.65rem;
+  left: 0;
+  margin: 0;
+  max-width: min(260px, calc(100% - 0.5rem));
+  padding: 0.42rem;
+  position: absolute;
   text-align: left;
+  top: 0;
 }
 .home-background-picker label {
   color: rgba(245, 217, 139, 0.9);
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   letter-spacing: 0.08em;
-  margin-bottom: 0.28rem;
+  margin-bottom: 0.14rem;
 }
 .home-background-picker select {
   background: rgba(7, 6, 5, 0.76);
   border-color: rgba(232, 160, 32, 0.4);
   color: var(--text);
+  font-size: 0.72rem;
+  min-height: 34px;
   margin: 0;
+  padding: 0.3rem 1.7rem 0.3rem 0.42rem;
 }
 .home-background-random {
   background: linear-gradient(180deg, rgba(26, 151, 139, 0.88), rgba(5, 103, 99, 0.9));
@@ -1166,14 +1176,16 @@ body.home-active nav {
   color: #ffe7a6;
   cursor: pointer;
   font-family: inherit;
-  min-height: 44px;
-  padding: 0.55rem 0.75rem;
+  font-size: 1rem;
+  min-height: 34px;
+  min-width: 34px;
+  padding: 0.25rem;
   white-space: nowrap;
 }
 .home-background-place {
   color: rgba(240, 223, 192, 0.66);
-  font-size: 0.66rem;
-  margin-top: 0.35rem;
+  font-size: 0.56rem;
+  margin-top: 0.18rem;
 }
 .home-console {
   background:
@@ -1509,17 +1521,69 @@ body.home-active nav {
 .streak-progress-legend .streak-legend-mark.progress-6 { background: #a84d30; border-color: #ed8b6c; }
 .streak-progress-legend .streak-legend-mark.progress-7 { background: #8d345a; border-color: #d8789d; }
 .streak-progress-legend .streak-legend-mark.progress-8 { background: #263f92; border-color: #728be5; }
-.home-activity-dashboard {
+.achievement-data-card {
   background: rgba(16, 12, 8, 0.78);
   border: 1px solid rgba(232, 160, 32, 0.32);
   border-radius: 8px;
   box-shadow: 0 16px 36px rgba(0,0,0,0.3);
-  margin-top: 1rem;
+  padding: 0;
+  overflow: hidden;
+}
+.achievement-data-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  font-family: inherit;
+  gap: 0.3rem 0.7rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.9rem 0.95rem;
+  text-align: left;
+  text-decoration: none;
+  width: 100%;
+}
+.achievement-data-toggle:hover {
+  background: rgba(232, 160, 32, 0.07);
+}
+.achievement-data-toggle h2 {
+  color: #f1d287;
+  font-size: 1rem;
+  margin: 0;
+}
+.achievement-data-toggle-copy {
+  color: rgba(240, 223, 192, 0.6);
+  font-size: 0.68rem;
+  grid-column: 1;
+}
+.achievement-data-chevron {
+  color: #f1d287;
+  font-size: 1.15rem;
+  transition: transform 0.2s ease;
+}
+.achievement-data-action {
+  align-items: center;
+  color: rgba(245, 217, 139, 0.88);
+  display: flex;
+  font-size: 0.68rem;
+  gap: 0.32rem;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  white-space: nowrap;
+}
+.achievement-data-panel {
+  border-top: 1px solid rgba(232, 160, 32, 0.24);
   padding: 0.95rem;
 }
-.home-activity-dashboard h2 {
+.achievement-data-section + .achievement-data-section {
+  border-top: 1px solid rgba(232, 160, 32, 0.18);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.achievement-data-section > h3 {
   color: #f1d287;
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   margin-bottom: 0.35rem;
 }
 .home-dashboard-copy {
@@ -1800,10 +1864,10 @@ body.home-active nav {
     min-height: 64px;
   }
   .home-background-picker {
-    align-items: stretch;
-    grid-template-columns: 1fr;
+    align-items: center;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
-  .home-background-random { width: 100%; }
+  .home-background-random { width: auto; }
 }
 
 /* Mobile usability polish */
@@ -2034,7 +2098,7 @@ nav button {
           </select>
           <div class="home-background-place" id="home-background-place">中世イスラームの図書館を訪問中</div>
         </div>
-        <button class="home-background-random" onclick="chooseRandomHistoricalBackground()">気分で選ぶ</button>
+        <button class="home-background-random" onclick="chooseRandomHistoricalBackground()" aria-label="学びの旅先をランダムに選ぶ" title="気分で選ぶ">↻</button>
       </div>
     </header>
 
@@ -2089,19 +2153,6 @@ nav button {
           <span class="streak-legend-item"><i class="streak-legend-mark progress-7"></i>300〜600分</span>
           <span class="streak-legend-item"><i class="streak-legend-mark progress-8"></i>600分以上</span>
         </div>
-      </div>
-    </section>
-
-    <section class="home-activity-dashboard">
-      <h2>日毎の活動ダッシュボード</h2>
-      <div class="home-dashboard-copy">直近7日間の本・学習ジャンルごとの記録時間</div>
-      <div class="dashboard-block">
-        <h3>本ごとの時間</h3>
-        <div class="dashboard-table-wrap" id="home-book-dashboard"></div>
-      </div>
-      <div class="dashboard-block">
-        <h3>学習ジャンルごとの時間</h3>
-        <div class="dashboard-table-wrap" id="home-learning-dashboard"></div>
       </div>
     </section>
 
@@ -2399,24 +2450,12 @@ nav button {
     <div class="badge-grid" id="badge-grid"></div>
   </div>
 
-  <div class="card">
-    <h2>記録データ</h2>
-    <p class="text-sm" style="line-height:1.7; margin-bottom:0.8rem;">本棚、セッション、メモ、問いへの回答、実績をJSONファイルに書き出します。スマホでは共有メニューからこのチャットへ添付できます。</p>
-    <button class="btn btn-outline" onclick="exportReadingData()">記録データを書き出す</button>
-    <div class="text-sm" id="export-data-status" style="display:none; margin-top:0.65rem; color:var(--success);"></div>
-  </div>
-
-  <div class="card">
-    <h2>日毎・時間帯別の活動データ</h2>
-    <p class="text-sm" style="line-height:1.7; margin-bottom:0.8rem;">読書・学習・創作の内容と時間帯を振り返り、傾向分析に使えます。</p>
-    <div class="activity-analysis-controls">
-      <button class="btn btn-sm" data-activity-days="7" onclick="setActivityAnalysisDays(7)">7日</button>
-      <button class="btn btn-sm btn-outline" data-activity-days="14" onclick="setActivityAnalysisDays(14)">14日</button>
-      <button class="btn btn-sm btn-outline" data-activity-days="30" onclick="setActivityAnalysisDays(30)">30日</button>
-      <button class="btn btn-sm btn-outline" data-activity-days="0" onclick="setActivityAnalysisDays(0)">全期間</button>
-    </div>
-    <div class="activity-summary" id="activity-analysis-summary"></div>
-    <div class="activity-table-wrap" id="activity-analysis-table"></div>
+  <div class="card achievement-data-card">
+    <a class="achievement-data-toggle" id="achievement-data-toggle" href="dashboard.html">
+      <h2>ダッシュボードと記録データ</h2>
+      <span class="achievement-data-toggle-copy">項目ごとの時間推移・比較・記録明細</span>
+      <span class="achievement-data-action"><span>分析ページを開く</span><span class="achievement-data-chevron" aria-hidden="true">›</span></span>
+    </a>
   </div>
 </div>
 
@@ -3042,7 +3081,7 @@ function renderDashboardMatrix(targetId, rows, dates, emptyMessage) {
   `;
 }
 
-function renderHomeActivityDashboard() {
+function renderActivityDashboard() {
   const dates = getRecentDateColumns(7);
   const dateKeys = new Set(dates.map(date => date.key));
   const bookRows = data.books.map(book => ({ label: book.title, id: book.id, minutes: {} }));
@@ -3071,8 +3110,8 @@ function renderHomeActivityDashboard() {
     }
   });
 
-  renderDashboardMatrix('home-book-dashboard', bookRows, dates, '直近7日間の本の記録はありません');
-  renderDashboardMatrix('home-learning-dashboard', learningRows, dates, '直近7日間の学習記録はありません');
+  renderDashboardMatrix('achievement-book-dashboard', bookRows, dates, '直近7日間の本の記録はありません');
+  renderDashboardMatrix('achievement-learning-dashboard', learningRows, dates, '直近7日間の学習記録はありません');
 }
 
 function updateHome() {
@@ -3204,7 +3243,7 @@ function updateHome() {
     c.classList.toggle('active', Number(c.dataset.goal) === goal);
   });
 
-  renderHomeActivityDashboard();
+  renderActivityDashboard();
 
   // 統計
   document.getElementById('stat-sessions').textContent = data.sessions.length;
@@ -5144,6 +5183,10 @@ setHomePreviewZoom(homePreviewZoom);
 updateLayoutOffsets();
 updateHome();
 restoreActiveSession();
+const requestedScreen = new URLSearchParams(window.location.search).get('screen');
+if (!sessionStart && ['bookshelf', 'session', 'quiz', 'achievements'].includes(requestedScreen)) {
+  showScreen(requestedScreen);
+}
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (sessionStart) saveActiveSession();
