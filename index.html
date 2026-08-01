@@ -1412,10 +1412,18 @@ body.home-active nav {
 .home-today-grid {
   display: grid;
   gap: 0.62rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(210px, 1fr));
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  padding-bottom: 0.55rem;
+  scrollbar-color: rgba(232, 160, 32, 0.6) rgba(240, 223, 192, 0.1);
+  scrollbar-width: thin;
+  scroll-snap-type: inline proximity;
+  -webkit-overflow-scrolling: touch;
 }
 .home-today-column {
   min-width: 0;
+  scroll-snap-align: start;
 }
 .home-today-column + .home-today-column {
   border-left: 1px solid rgba(232, 160, 32, 0.2);
@@ -2362,6 +2370,12 @@ nav button {
         <option value="">-- 本を選んでください --</option>
       </select>
     </div>
+    <div class="card" id="learning-genre-selection-card" style="display:none;">
+      <h2>学習ジャンルを選ぶ</h2>
+      <label for="learning-genre-select">今回学習するジャンル</label>
+      <select id="learning-genre-select"></select>
+      <p class="text-sm">ジャンルの登録・編集は、この画面の下部から行えます</p>
+    </div>
     <div class="card">
       <h2>目標時間: <span id="target-minutes-display">30</span>分</h2>
       <input type="range" id="target-minutes" min="5" max="180" step="5" value="30"
@@ -2408,10 +2422,15 @@ nav button {
         placeholder="例：読んだ章の発想から、探索ゲームのコアループを組む" style="resize:none;"></textarea>
       <p class="text-sm">読書から生まれたアイデアや、試作したい作品の方向を残せます</p>
     </div>
-    <div class="card" id="learning-session-card" style="display:none;">
-      <h2>学習ジャンル</h2>
-      <label for="learning-genre-select">ジャンルを選ぶ</label>
-      <select id="learning-genre-select"></select>
+    <div class="card" id="learning-session-note-card" style="display:none;">
+      <h2>今日学ぶこと（任意）</h2>
+      <label for="learning-session-note">学習内容のメモ</label>
+      <textarea id="learning-session-note" maxlength="140" rows="3"
+        placeholder="例：データサイエンス講座で回帰分析を進める / 古典シリア語の動詞変化を復習する" style="resize:none;"></textarea>
+      <p class="text-sm">動画・ネット記事・教科書など、今日取り組む内容を残せます</p>
+    </div>
+    <div class="card" id="learning-genre-manager-card" style="display:none;">
+      <h2>学習ジャンルの登録・編集</h2>
       <label for="learning-genre-input">新しいジャンルを追加</label>
       <input type="text" id="learning-genre-input" maxlength="30" placeholder="例：古典シリア語、データサイエンス、PCハードウェア、AI">
       <button class="btn btn-outline btn-sm" onclick="addLearningGenre()">ジャンルを追加</button>
@@ -2422,10 +2441,6 @@ nav button {
         <button class="btn btn-sm btn-outline" data-learning-filter="done" onclick="filterLearningGenres('done')">完了</button>
       </div>
       <div id="learning-genre-manager" style="margin-top:0.8rem;"></div>
-      <label for="learning-session-note">今日学ぶこと（任意）</label>
-      <textarea id="learning-session-note" maxlength="140" rows="3"
-        placeholder="例：データサイエンス講座で回帰分析を進める / 古典シリア語の動詞変化を復習する" style="resize:none;"></textarea>
-      <p class="text-sm">古典シリア語、データサイエンス講座、PCハードウェア、AIなど、動画・ネット記事・教科書での学習を記録できます</p>
     </div>
   </div>
 
@@ -2605,6 +2620,7 @@ const DB = {
       totalMinutes: 0,
       quizCount: 0,
       lastUsedBookId: null,
+      lastUsedLearningGenre: null,
       lastUsedDrink: '☕',
       dailyGoalMinutes: 60,
       recoveryTokens: 0,
@@ -2622,7 +2638,7 @@ const DB = {
 
 // 既存データに新フィールドを安全にマージ
 const DEFAULT_LEARNING_GENRES = ['古典シリア語', 'データサイエンス講座', 'PCハードウェア', 'AI'];
-const _defaults = { lastUsedBookId: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistoryVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES, learningGenreStatuses: {} };
+const _defaults = { lastUsedBookId: null, lastUsedLearningGenre: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistoryVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES, learningGenreStatuses: {} };
 let data = Object.assign({}, _defaults, DB.load());
 if (!Array.isArray(data.books)) data.books = [];
 if (!Array.isArray(data.sessions)) data.sessions = [];
@@ -3833,8 +3849,18 @@ function renderLearningGenreOptions(selected = '') {
     renderLearningGenreManager();
     return;
   }
+  const lastRecordedGenre = [...data.sessions].reverse().find(session => {
+    const genre = session?.learningGenre || (session?.type === 'learning' ? session.genre : '');
+    return session?.type === 'learning' && activeGenres.includes(genre);
+  });
+  const lastRecordedGenreName = lastRecordedGenre?.learningGenre || lastRecordedGenre?.genre || '';
+  const preferredGenre = activeGenres.includes(selected)
+    ? selected
+    : activeGenres.includes(data.lastUsedLearningGenre)
+      ? data.lastUsedLearningGenre
+      : lastRecordedGenreName || activeGenres[0];
   sel.innerHTML = activeGenres.map(genre => `
-    <option value="${escapeHtml(genre)}" ${genre === selected ? 'selected' : ''}>${escapeHtml(genre)}</option>
+    <option value="${escapeHtml(genre)}" ${genre === preferredGenre ? 'selected' : ''}>${escapeHtml(genre)}</option>
   `).join('');
   renderLearningGenreManager();
 }
@@ -3932,6 +3958,7 @@ function editLearningGenre(index) {
       session.genre = newGenre;
     }
   });
+  if (data.lastUsedLearningGenre === oldGenre) data.lastUsedLearningGenre = newGenre;
   DB.save(data);
   renderLearningGenreOptions(newGenre);
 }
@@ -3960,6 +3987,7 @@ function deleteLearningGenre(index) {
   if (!confirm(`「${genre}」を削除しますか？過去の学習記録は残ります。`)) return;
   data.learningGenres.splice(index, 1);
   if (data.learningGenreStatuses) delete data.learningGenreStatuses[genre];
+  if (data.lastUsedLearningGenre === genre) data.lastUsedLearningGenre = null;
   DB.save(data);
   const nextActive = data.learningGenres.find(item => getLearningGenreStatus(item) === 'active') || '';
   renderLearningGenreOptions(nextActive);
@@ -3985,8 +4013,10 @@ function updateSessionModeUI() {
   if (heading) heading.textContent = isCreative ? 'ベースにする本を選ぶ' : '読む本を選ぶ';
   const creativeCard = document.getElementById('creative-session-card');
   if (creativeCard) creativeCard.style.display = isCreative ? 'block' : 'none';
-  const learningCard = document.getElementById('learning-session-card');
-  if (learningCard) learningCard.style.display = isLearning ? 'block' : 'none';
+  ['learning-genre-selection-card', 'learning-session-note-card', 'learning-genre-manager-card'].forEach(id => {
+    const card = document.getElementById(id);
+    if (card) card.style.display = isLearning ? 'block' : 'none';
+  });
   if (isLearning) renderLearningGenreOptions();
   const noteEl = document.getElementById('session-pre-note');
   if (noteEl) {
@@ -4488,11 +4518,20 @@ function addManualSession() {
     return;
   }
 
+  const isLearning = sessionMode === 'learning';
+  const selectedLearningGenre = document.getElementById('learning-genre-select')?.value || '';
+  if (isLearning && !selectedLearningGenre) {
+    alert('学習ジャンルを選んでください');
+    document.getElementById('learning-genre-select')?.focus();
+    return;
+  }
   const { bookId: rawBookId } = getCurrentBookSelection();
-  const bookId = rawBookId ? parseInt(rawBookId, 10) : null;
+  const bookId = isLearning ? null : (rawBookId ? parseInt(rawBookId, 10) : null);
   const book = bookId ? data.books.find(b => b.id === bookId) : null;
-  const genre = book?.genre || 'その他';
-  const preNote = document.getElementById('session-pre-note')?.value || '';
+  const genre = isLearning ? selectedLearningGenre : (book?.genre || 'その他');
+  const preNote = isLearning
+    ? (document.getElementById('learning-session-note')?.value || '')
+    : (document.getElementById('session-pre-note')?.value || '');
 
   const session = {
     date: new Date().toISOString(),
@@ -4501,11 +4540,19 @@ function addManualSession() {
     genre,
     targetMinutes: minutes,
     preNote,
+    type: isLearning ? 'learning' : 'reading',
+    learningGenre: isLearning ? genre : undefined,
+    learningNote: isLearning ? preNote : undefined,
     manual: true,
     isTiny: false,
   };
   data.sessions.push(session);
-  data.totalMinutes += minutes;
+  if (isLearning) {
+    data.learningMinutes = (data.learningMinutes || 0) + minutes;
+    data.lastUsedLearningGenre = genre;
+  } else {
+    data.totalMinutes += minutes;
+  }
 
   const xpGained = Math.max(10, minutes * 2);
   const previousXp = data.xp;
@@ -4628,6 +4675,7 @@ function endSession() {
 
   // lastUsed更新
   if (bookId) data.lastUsedBookId = bookId;
+  if (mode === 'learning') data.lastUsedLearningGenre = genre;
 
   // バッジチェック
   const newBadges = checkBadges();
