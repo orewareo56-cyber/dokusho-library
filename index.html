@@ -31,13 +31,12 @@
   --library-bg-image-mobile: url('assets/backgrounds/mobile/medieval-islamic-library.webp');
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-padding-bottom: calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset)); }
+html {
+  background: #080604;
+  scroll-padding-bottom: calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset));
+}
 body {
-  background:
-    radial-gradient(circle at 50% 8%, rgba(236, 178, 76, 0.15), transparent 28%),
-    linear-gradient(180deg, rgba(7, 5, 3, 0.08), rgba(8, 6, 4, 0.18) 34%, rgba(10, 7, 4, 0.52) 72%, rgba(14, 10, 6, 0.72)),
-    var(--library-bg-image) center / cover no-repeat;
-  background-color: #080604;
+  background: #080604;
   color: var(--text);
   font-family: 'Georgia', serif;
   min-height: 100vh;
@@ -45,6 +44,24 @@ body {
   flex-direction: column;
   overflow-wrap: anywhere;
   -webkit-text-size-adjust: 100%;
+}
+.fixed-library-background {
+  background:
+    radial-gradient(circle at 50% 8%, rgba(236, 178, 76, 0.15), transparent 28%),
+    linear-gradient(180deg, rgba(7, 5, 3, 0.08), rgba(8, 6, 4, 0.18) 34%, rgba(10, 7, 4, 0.52) 72%, rgba(14, 10, 6, 0.72)),
+    var(--library-bg-image) center top / cover no-repeat;
+  background-color: #080604;
+  height: 100vh;
+  height: 100lvh;
+  left: 0;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  transform: translateZ(0);
+  width: 100%;
+  will-change: transform;
+  z-index: 0;
 }
 /* ナビゲーション（下部タブバー） */
 nav {
@@ -115,7 +132,9 @@ main {
   padding: 1rem 1rem calc(var(--bottom-overlay-offset) + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset));
   max-width: 720px;
   margin: 0 auto;
+  position: relative;
   width: 100%;
+  z-index: 1;
 }
 /* ページタイトル（上部ヘッダー） */
 .page-header {
@@ -815,9 +834,7 @@ select option { background: var(--bg2); }
 .isbn-actions .btn { flex:1; min-width:120px; }
 #barcode-panel { display:none; margin-bottom:0.7rem; }
 #barcode-video { width:100%; max-height:220px; border-radius:8px; border:1px solid var(--border); background:#000; object-fit:cover; }
-body.home-active {
-  background: #080604;
-}
+body.home-active { background: #080604; }
 body.home-active main {
   max-width: none;
   padding: 0;
@@ -1067,20 +1084,20 @@ body.home-active nav {
   }
 }
 
-body.home-active {
+body.home-active .fixed-library-background {
   background:
     radial-gradient(circle at 50% 10%, rgba(232, 160, 32, 0.18), transparent 26%),
     linear-gradient(180deg, rgba(8, 6, 4, 0.18), rgba(8, 6, 4, 0.62) 45%, rgba(8, 6, 4, 0.9)),
-    var(--library-bg-image) center top / cover no-repeat fixed;
+    var(--library-bg-image) center top / cover no-repeat;
   background-color: #080604;
 }
 @media (max-width: 720px) {
-  body,
-  body.home-active {
+  .fixed-library-background,
+  body.home-active .fixed-library-background {
     background:
       radial-gradient(circle at 50% 9%, rgba(232, 160, 32, 0.12), transparent 25%),
       linear-gradient(180deg, rgba(8, 6, 4, 0.08), rgba(8, 6, 4, 0.2) 48%, rgba(8, 6, 4, 0.7)),
-      var(--library-bg-image-mobile) center / cover no-repeat fixed;
+      var(--library-bg-image-mobile) center / cover no-repeat;
     background-color: #080604;
   }
 }
@@ -2057,6 +2074,8 @@ nav button {
 </style>
 </head>
 <body class="home-active">
+
+<div class="fixed-library-background" aria-hidden="true"></div>
 
 <div id="tiny-banner" style="display:none;">
   <span style="font-size:0.9rem;">1分経過しました。もう少し読みますか？</span>
