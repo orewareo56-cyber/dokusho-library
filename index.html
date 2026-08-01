@@ -498,6 +498,12 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
   border-color: rgba(245, 209, 123, 0.65);
   color: #ffe7a6;
 }
+.session-start-block {
+  margin: 0.15rem 0 1rem;
+}
+.session-start-block .btn {
+  width: 100%;
+}
 .celebration-overlay {
   align-items: center;
   background: rgba(6, 4, 3, 0.58);
@@ -1379,6 +1385,81 @@ body.home-active nav {
   font-size: 0.82rem;
   justify-content: space-between;
 }
+.home-today-activity {
+  background: rgba(16, 12, 8, 0.78);
+  border: 1px solid rgba(232, 160, 32, 0.32);
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(0,0,0,0.3);
+  margin-top: 0.85rem;
+  padding: 0.9rem 0.95rem;
+}
+.home-today-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
+  margin-bottom: 0.72rem;
+}
+.home-today-heading h2 {
+  color: #f1d287;
+  font-size: 0.96rem;
+  margin: 0;
+}
+.home-today-total {
+  color: rgba(240, 223, 192, 0.64);
+  font-size: 0.68rem;
+}
+.home-today-grid {
+  display: grid;
+  gap: 0.62rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.home-today-column {
+  min-width: 0;
+}
+.home-today-column + .home-today-column {
+  border-left: 1px solid rgba(232, 160, 32, 0.2);
+  padding-left: 0.62rem;
+}
+.home-today-column h3 {
+  align-items: center;
+  color: rgba(240, 223, 192, 0.84);
+  display: flex;
+  font-size: 0.74rem;
+  justify-content: space-between;
+  margin-bottom: 0.42rem;
+}
+.home-today-column h3 strong {
+  color: var(--accent2);
+  font-size: 0.76rem;
+}
+.home-today-list {
+  display: grid;
+  gap: 0.32rem;
+}
+.home-today-item {
+  align-items: baseline;
+  color: rgba(240, 223, 192, 0.74);
+  display: flex;
+  font-size: 0.68rem;
+  gap: 0.55rem;
+  justify-content: space-between;
+}
+.home-today-item span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-today-item strong {
+  color: #f5d98b;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+.home-today-empty {
+  color: rgba(240, 223, 192, 0.46);
+  font-size: 0.65rem;
+}
 .home-streak-panel {
   align-items: center;
   background: rgba(16, 12, 8, 0.78);
@@ -1388,6 +1469,7 @@ body.home-active nav {
   display: flex;
   gap: 1rem;
   justify-content: space-between;
+  margin-top: 0.85rem;
   padding: 0.95rem;
 }
 .home-streak-main {
@@ -2148,6 +2230,27 @@ nav button {
       </div>
     </section>
 
+    <section class="home-today-activity" aria-labelledby="home-today-title">
+      <div class="home-today-heading">
+        <h2 id="home-today-title">今日の軌跡</h2>
+        <span class="home-today-total" id="home-today-total">合計 0分</span>
+      </div>
+      <div class="home-today-grid">
+        <div class="home-today-column">
+          <h3><span>読書</span><strong id="home-today-reading-total">0分</strong></h3>
+          <div class="home-today-list" id="home-today-reading-list"></div>
+        </div>
+        <div class="home-today-column">
+          <h3><span>学習</span><strong id="home-today-learning-total">0分</strong></h3>
+          <div class="home-today-list" id="home-today-learning-list"></div>
+        </div>
+        <div class="home-today-column">
+          <h3><span>創造</span><strong id="home-today-creative-total">0分</strong></h3>
+          <div class="home-today-list" id="home-today-creative-list"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="home-streak-panel">
       <div class="home-streak-main">
         <span class="home-streak-label">連続記録</span>
@@ -2267,6 +2370,11 @@ nav button {
         <span>5分</span><span>180分</span>
       </div>
     </div>
+    <div class="text-center session-start-block">
+      <button class="btn" style="font-size:1.1rem; padding:1rem 2.5rem;" onclick="startSession()">
+        <span id="session-start-label">セッション開始</span>
+      </button>
+    </div>
     <div class="card">
       <h2>学習時間を手入力で追加</h2>
       <label for="manual-minutes">学習した時間（分）</label>
@@ -2318,11 +2426,6 @@ nav button {
       <textarea id="learning-session-note" maxlength="140" rows="3"
         placeholder="例：データサイエンス講座で回帰分析を進める / 古典シリア語の動詞変化を復習する" style="resize:none;"></textarea>
       <p class="text-sm">古典シリア語、データサイエンス講座、PCハードウェア、AIなど、動画・ネット記事・教科書での学習を記録できます</p>
-    </div>
-    <div class="text-center mt2">
-      <button class="btn" style="font-size:1.1rem; padding:1rem 2.5rem;" onclick="startSession()">
-        <span id="session-start-label">セッション開始</span>
-      </button>
     </div>
   </div>
 
@@ -3133,6 +3236,49 @@ function renderActivityDashboard() {
   renderDashboardMatrix('achievement-learning-dashboard', learningRows, dates, '直近7日間の学習記録はありません');
 }
 
+function renderTodayItemTimes(todaySessions) {
+  const readingTotals = new Map();
+  const learningTotals = new Map();
+  const creativeTotals = new Map();
+
+  todaySessions.forEach(session => {
+    const minutes = Math.max(0, Number(session.minutes) || 0);
+    if (!minutes) return;
+    if (session.type === 'learning') {
+      const label = session.learningGenre || session.genre || '学習';
+      learningTotals.set(label, (learningTotals.get(label) || 0) + minutes);
+      return;
+    }
+    if (session.type === 'creative') {
+      const label = CREATIVE_TYPE_LABELS[session.creativeType] || '創造';
+      creativeTotals.set(label, (creativeTotals.get(label) || 0) + minutes);
+      return;
+    }
+    const book = data.books.find(item => String(item.id) === String(session.bookId));
+    const label = book?.title || session.genre || '読書';
+    readingTotals.set(label, (readingTotals.get(label) || 0) + minutes);
+  });
+
+  const renderList = (targetId, totals) => {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    const rows = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+    target.innerHTML = rows.length
+      ? rows.map(([label, minutes]) => `<div class="home-today-item"><span>${escapeHtml(label)}</span><strong>${minutes}分</strong></div>`).join('')
+      : '<div class="home-today-empty">まだ記録はありません</div>';
+  };
+  const readingMinutes = [...readingTotals.values()].reduce((sum, minutes) => sum + minutes, 0);
+  const learningMinutes = [...learningTotals.values()].reduce((sum, minutes) => sum + minutes, 0);
+  const creativeMinutes = [...creativeTotals.values()].reduce((sum, minutes) => sum + minutes, 0);
+  document.getElementById('home-today-reading-total').textContent = `${readingMinutes}分`;
+  document.getElementById('home-today-learning-total').textContent = `${learningMinutes}分`;
+  document.getElementById('home-today-creative-total').textContent = `${creativeMinutes}分`;
+  document.getElementById('home-today-total').textContent = `合計 ${readingMinutes + learningMinutes + creativeMinutes}分`;
+  renderList('home-today-reading-list', readingTotals);
+  renderList('home-today-learning-list', learningTotals);
+  renderList('home-today-creative-list', creativeTotals);
+}
+
 function updateHome() {
   // 最終セッションと今日の間に空白日があれば、1日につき1個で補完する。
   if (data.lastSessionDate) {
@@ -3225,7 +3371,8 @@ function updateHome() {
   // 今日の積みウィジェット
   const today2 = new Date().toDateString();
   const todaySessions = data.sessions.filter(s => new Date(s.date).toDateString() === today2);
-  const todayMinutes = todaySessions.reduce((sum, s) => sum + s.minutes, 0);
+  const todayMinutes = todaySessions.reduce((sum, s) => sum + (Number(s.minutes) || 0), 0);
+  renderTodayItemTimes(todaySessions);
   const canShowGoal600 = todayMinutes > 300;
   const goal600Chip = document.getElementById('goal-chip-600');
   if (goal600Chip) goal600Chip.style.display = canShowGoal600 ? '' : 'none';
