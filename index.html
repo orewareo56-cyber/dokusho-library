@@ -1411,31 +1411,26 @@ body.home-active nav {
 }
 .home-today-grid {
   display: grid;
-  gap: 0.62rem;
-  grid-template-columns: repeat(3, minmax(210px, 1fr));
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  padding-bottom: 0.55rem;
-  scrollbar-color: rgba(232, 160, 32, 0.6) rgba(240, 223, 192, 0.1);
-  scrollbar-width: thin;
-  scroll-snap-type: inline proximity;
-  -webkit-overflow-scrolling: touch;
+  grid-template-columns: minmax(0, 1fr);
 }
 .home-today-column {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: minmax(72px, 0.28fr) minmax(0, 1fr);
   min-width: 0;
-  scroll-snap-align: start;
+  padding: 0.62rem 0;
 }
 .home-today-column + .home-today-column {
-  border-left: 1px solid rgba(232, 160, 32, 0.2);
-  padding-left: 0.62rem;
+  border-top: 1px solid rgba(232, 160, 32, 0.2);
 }
 .home-today-column h3 {
-  align-items: center;
+  align-items: flex-start;
   color: rgba(240, 223, 192, 0.84);
   display: flex;
+  flex-direction: column;
   font-size: 0.74rem;
-  justify-content: space-between;
-  margin-bottom: 0.42rem;
+  gap: 0.2rem;
+  margin: 0;
 }
 .home-today-column h3 strong {
   color: var(--accent2);
@@ -1443,21 +1438,27 @@ body.home-active nav {
 }
 .home-today-list {
   display: grid;
-  gap: 0.32rem;
+  min-width: 0;
 }
 .home-today-item {
-  align-items: baseline;
+  align-items: start;
   color: rgba(240, 223, 192, 0.74);
   display: flex;
   font-size: 0.68rem;
   gap: 0.55rem;
   justify-content: space-between;
+  line-height: 1.45;
+  min-width: 0;
+  padding: 0.2rem 0;
+}
+.home-today-item + .home-today-item {
+  border-top: 1px solid rgba(240, 223, 192, 0.08);
+  margin-top: 0.12rem;
+  padding-top: 0.32rem;
 }
 .home-today-item span:first-child {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .home-today-item strong {
   color: #f5d98b;
@@ -2253,7 +2254,7 @@ nav button {
           <div class="home-today-list" id="home-today-learning-list"></div>
         </div>
         <div class="home-today-column">
-          <h3><span>創造</span><strong id="home-today-creative-total">0分</strong></h3>
+          <h3><span>創作</span><strong id="home-today-creative-total">0分</strong></h3>
           <div class="home-today-list" id="home-today-creative-list"></div>
         </div>
       </div>
@@ -2638,17 +2639,14 @@ const DB = {
 
 // 既存データに新フィールドを安全にマージ
 const DEFAULT_LEARNING_GENRES = ['古典シリア語', 'データサイエンス講座', 'PCハードウェア', 'AI'];
-const _defaults = { lastUsedBookId: null, lastUsedLearningGenre: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistoryVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: DEFAULT_LEARNING_GENRES, learningGenreStatuses: {} };
+const _defaults = { lastUsedBookId: null, lastUsedLearningGenre: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistoryVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: [...DEFAULT_LEARNING_GENRES], learningGenreStatuses: {} };
 let data = Object.assign({}, _defaults, DB.load());
 if (!Array.isArray(data.books)) data.books = [];
 if (!Array.isArray(data.sessions)) data.sessions = [];
 if (!Array.isArray(data.quizAnswers)) data.quizAnswers = [];
 if (!Array.isArray(data.earnedBadges)) data.earnedBadges = [];
 if (!Array.isArray(data.learningGenres) || data.learningGenres.length === 0) data.learningGenres = [...DEFAULT_LEARNING_GENRES];
-data.learningGenres = [
-  ...DEFAULT_LEARNING_GENRES,
-  ...data.learningGenres.filter(genre => !DEFAULT_LEARNING_GENRES.includes(genre)),
-];
+data.learningGenres = [...new Set(data.learningGenres.map(genre => String(genre).trim()).filter(Boolean))];
 if (!data.learningGenreStatuses || typeof data.learningGenreStatuses !== 'object') data.learningGenreStatuses = {};
 data.learningGenres.forEach(genre => {
   if (!['active', 'planned', 'done'].includes(data.learningGenreStatuses[genre])) {
@@ -3266,7 +3264,7 @@ function renderTodayItemTimes(todaySessions) {
       return;
     }
     if (session.type === 'creative') {
-      const label = CREATIVE_TYPE_LABELS[session.creativeType] || '創造';
+      const label = CREATIVE_TYPE_LABELS[session.creativeType] || '創作';
       creativeTotals.set(label, (creativeTotals.get(label) || 0) + minutes);
       return;
     }
@@ -3953,7 +3951,7 @@ function editLearningGenre(index) {
   data.learningGenreStatuses[newGenre] = getLearningGenreStatus(oldGenre);
   if (newGenre !== oldGenre) delete data.learningGenreStatuses[oldGenre];
   data.sessions.forEach(session => {
-    if (session.type === 'learning' && session.learningGenre === oldGenre) {
+    if (session.type === 'learning' && (session.learningGenre === oldGenre || (!session.learningGenre && session.genre === oldGenre))) {
       session.learningGenre = newGenre;
       session.genre = newGenre;
     }
