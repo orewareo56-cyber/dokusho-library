@@ -3015,6 +3015,26 @@ const BADGES = [
   { id: 'level_sanctuary', name: '知識の聖域を拓く', desc: 'レベル「知識の聖域の主」に到達', progressFn: d => ({ current: d.xp, max: 4500 }) },
   { id: 'level_eternal', name: '永遠の探求へ', desc: 'レベル「永遠の探求者」に到達', progressFn: d => ({ current: d.xp, max: 8000 }) },
   { id: 'level_compiler', name: '学際の編纂者就任', desc: 'レベル「学際の編纂者」に到達', progressFn: d => ({ current: d.xp, max: 12000 }) },
+  { id: 'session_200', name: '二百回の開架', desc: 'セッション200回達成', progressFn: d => ({ current: d.sessions.length, max: 200 }) },
+  { id: 'session_250', name: '二百五十枚の栞', desc: 'セッション250回達成', progressFn: d => ({ current: d.sessions.length, max: 250 }) },
+  { id: 'session_300', name: '三百夜の閲覧席', desc: 'セッション300回達成', progressFn: d => ({ current: d.sessions.length, max: 300 }) },
+  { id: 'streak_75', name: '七十五日の書灯', desc: '75日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 75 }) },
+  { id: 'streak_90', name: '三月の守火', desc: '90日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 90 }) },
+  { id: 'streak_120', name: '百二十日の航路', desc: '120日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 120 }) },
+  { id: 'progress_7500', name: '七千五百分の連鎖', desc: '読書・創作・学習を合計7500分記録', progressFn: d => ({ current: totalProgressMinutes(d), max: 7500 }) },
+  { id: 'progress_10000', name: '万分の知の海', desc: '読書・創作・学習を合計10000分記録', progressFn: d => ({ current: totalProgressMinutes(d), max: 10000 }) },
+  { id: 'active_days_75', name: '七十五日の足跡', desc: '通算75日セッションを記録', progressFn: d => ({ current: allTimeActiveDays(d), max: 75 }) },
+  { id: 'active_days_150', name: '百五十日の書窓', desc: '通算150日セッションを記録', progressFn: d => ({ current: allTimeActiveDays(d), max: 150 }) },
+  { id: 'learning_100', name: '百回の探究ノート', desc: '学習セッションを100回完了', progressFn: d => ({ current: learningSessions(d).length, max: 100 }) },
+  { id: 'learning_150', name: '百五十回の自習室', desc: '学習セッションを150回完了', progressFn: d => ({ current: learningSessions(d).length, max: 150 }) },
+  { id: 'learning_minutes_5000', name: '五千分の研究路', desc: '学習時間を合計5000分記録', progressFn: d => ({ current: learningMinutes(d), max: 5000 }) },
+  { id: 'learning_minutes_7500', name: '七千五百分の学知', desc: '学習時間を合計7500分記録', progressFn: d => ({ current: learningMinutes(d), max: 7500 }) },
+  { id: 'creative_10', name: '十回の工房開き', desc: '創作セッションを10回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 10 }) },
+  { id: 'creative_minutes_300', name: '五時間の試作帳', desc: '創作時間を合計300分記録', progressFn: d => ({ current: creativeMinutes(d), max: 300 }) },
+  { id: 'books_done_15', name: '十五冊の読了棚', desc: '本を15冊読了', progressFn: d => ({ current: doneBooks(d), max: 15 }) },
+  { id: 'learning_datascience_50', name: 'データを読む五十眼', desc: 'データサイエンスの学習を50回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'データサイエンス'), max: 50 }) },
+  { id: 'learning_itpassport_50', name: 'IT基盤の築城師', desc: 'ITパスポートの学習を50回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'ITパスポート'), max: 50 }) },
+  { id: 'learning_syriac_25', name: 'シリア語二十五の刻印', desc: 'シリア語の学習を25回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'シリア語'), max: 25 }) },
 ];
 
 function badgeProgress(badge, d) {
@@ -5390,6 +5410,8 @@ function updateAchievements() {
 }
 
 // ==================== 初期化 ====================
+// 実績カタログ追加時は、過去の記録で到達済みの実績も即時反映する。
+if (checkBadges().length > 0) DB.save(data);
 setHistoricalBackground(historicalBackgroundId, false);
 setHomePreviewZoom(homePreviewZoom);
 updateLayoutOffsets();
