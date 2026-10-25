@@ -598,8 +598,7 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
 .level-rank-14 { color: #b8f0e6; text-shadow: 0 0 16px rgba(184,240,230,0.62), 0 0 30px rgba(233,196,106,0.5); }
 .level-rank-15 { color: #ffe3a3; text-shadow: 0 0 16px rgba(255,227,163,0.66), 0 0 32px rgba(196,95,157,0.52); }
 .level-rank-16 { color: #e0c8ff; text-shadow: 0 0 18px rgba(224,200,255,0.68), 0 0 34px rgba(76,201,240,0.55); }
-.level-rank-17 { color: #ffffff; text-shadow: 0 0 14px #f9c74f, 0 0 36px rgba(123,97,255,0.7); }
-.level-rank-18 { color: #ffffff; text-shadow: 0 0 10px #ffd166, 0 0 24px #75e0cf, 0 0 44px rgba(245,183,255,0.75); }
+.level-rank-17 { color: #ffffff; text-shadow: 0 0 10px #ffd166, 0 0 24px #75e0cf, 0 0 44px rgba(245,183,255,0.75); }
 .level-detail-toggle {
   margin-top: 0.85rem;
 }
@@ -2397,10 +2396,10 @@ nav button {
       </button>
     </div>
     <div class="card">
-      <h2>学習時間を手入力で追加</h2>
-      <label for="manual-minutes">学習した時間（分）</label>
+      <h2 id="manual-session-heading">時間を手入力で追加</h2>
+      <label for="manual-minutes" id="manual-minutes-label">取り組んだ時間（分）</label>
       <input type="number" id="manual-minutes" min="1" max="600" step="1" placeholder="例：25">
-      <p class="text-sm">タイマーを使わなかった読書や学習も、選択中の本に記録できます</p>
+      <p class="text-sm">タイマーを使わなかった読書・創作・学習も、選択中の種別で記録できます</p>
       <button class="btn btn-outline btn-sm" onclick="addManualSession()">この時間を記録する</button>
     </div>
     <div class="card" id="session-briefing" style="display:none;">
@@ -2783,12 +2782,11 @@ const LEVELS = [
   { name: '万巻の航海者', xp: 26000 },
   { name: '知の星図を描く者', xp: 36000 },
   { name: '仮想図書館の大賢者', xp: 50000 },
-  { name: '翻訳運動の継承者', xp: 65000 },
-  { name: '知恵の館の司書長', xp: 85000 },
-  { name: '写本をつなぐ碩学', xp: 110000 },
-  { name: '千夜の学匠', xp: 140000 },
-  { name: '文明を渡す架け橋', xp: 180000 },
-  { name: '知の大図書館そのもの', xp: 230000 },
+  { name: '翻訳運動の継承者', xp: 60000 },
+  { name: '知恵の館の司書長', xp: 70000 },
+  { name: '写本をつなぐ碩学', xp: 82000 },
+  { name: '千夜の学匠', xp: 95000 },
+  { name: '文明を渡す架け橋', xp: 110000 },
 ];
 
 function getLevel(xp) {
@@ -3144,10 +3142,10 @@ const BADGES = [
   { id: 'level_voyager', name: '万巻の航海へ', desc: 'レベル「万巻の航海者」に到達', progressFn: d => ({ current: d.xp, max: 26000 }) },
   { id: 'level_starmap', name: '知の星図を描く', desc: 'レベル「知の星図を描く者」に到達', progressFn: d => ({ current: d.xp, max: 36000 }) },
   { id: 'level_grand_sage', name: '大賢者の戴冠', desc: 'レベル「仮想図書館の大賢者」に到達', progressFn: d => ({ current: d.xp, max: 50000 }) },
-  { id: 'level_heir', name: '翻訳運動を継ぐ', desc: 'レベル「翻訳運動の継承者」に到達', progressFn: d => ({ current: d.xp, max: 65000 }) },
-  { id: 'level_house_of_wisdom', name: '知恵の館の鍵', desc: 'レベル「知恵の館の司書長」に到達', progressFn: d => ({ current: d.xp, max: 85000 }) },
-  { id: 'level_thousand_nights', name: '千夜の学匠就任', desc: 'レベル「千夜の学匠」に到達', progressFn: d => ({ current: d.xp, max: 140000 }) },
-  { id: 'level_great_library', name: '大図書館の化身', desc: 'レベル「知の大図書館そのもの」に到達', progressFn: d => ({ current: d.xp, max: 230000 }) },
+  { id: 'level_heir', name: '翻訳運動を継ぐ', desc: 'レベル「翻訳運動の継承者」に到達', progressFn: d => ({ current: d.xp, max: 60000 }) },
+  { id: 'level_house_of_wisdom', name: '知恵の館の鍵', desc: 'レベル「知恵の館の司書長」に到達', progressFn: d => ({ current: d.xp, max: 70000 }) },
+  { id: 'level_thousand_nights', name: '千夜の学匠就任', desc: 'レベル「千夜の学匠」に到達', progressFn: d => ({ current: d.xp, max: 95000 }) },
+  { id: 'level_bridge', name: '文明を渡す者', desc: 'レベル「文明を渡す架け橋」に到達', progressFn: d => ({ current: d.xp, max: 110000 }) },
 ];
 
 function badgeProgress(badge, d) {
@@ -4636,12 +4634,13 @@ function addManualSession() {
   const manualInput = document.getElementById('manual-minutes');
   const minutes = Math.max(0, parseInt(manualInput?.value || '0', 10));
   if (!minutes || minutes < 1) {
-    alert('学習した時間を1分以上で入力してください');
+    alert('取り組んだ時間を1分以上で入力してください');
     manualInput?.focus();
     return;
   }
 
   const isLearning = sessionMode === 'learning';
+  const isCreative = sessionMode === 'creative';
   const selectedLearningGenre = document.getElementById('learning-genre-select')?.value || '';
   if (isLearning && !selectedLearningGenre) {
     alert('学習ジャンルを選んでください');
@@ -4649,12 +4648,15 @@ function addManualSession() {
     return;
   }
   const { bookId: rawBookId } = getCurrentBookSelection();
-  const bookId = isLearning ? null : (rawBookId ? parseInt(rawBookId, 10) : null);
+  const bookId = (isLearning || isCreative) ? null : (rawBookId ? parseInt(rawBookId, 10) : null);
   const book = bookId ? data.books.find(b => b.id === bookId) : null;
   const genre = isLearning ? selectedLearningGenre : (book?.genre || 'その他');
   const preNote = isLearning
     ? (document.getElementById('learning-session-note')?.value || '')
+    : isCreative
+    ? (document.getElementById('creative-session-note')?.value || '')
     : (document.getElementById('session-pre-note')?.value || '');
+  const creativeType = document.getElementById('creative-work-type')?.value || 'game';
 
   const session = {
     date: new Date().toISOString(),
@@ -4663,9 +4665,11 @@ function addManualSession() {
     genre,
     targetMinutes: minutes,
     preNote,
-    type: isLearning ? 'learning' : 'reading',
+    type: isLearning ? 'learning' : isCreative ? 'creative' : 'reading',
     learningGenre: isLearning ? genre : undefined,
     learningNote: isLearning ? preNote : undefined,
+    creativeType: isCreative ? creativeType : undefined,
+    creativeNote: isCreative ? preNote : undefined,
     manual: true,
     isTiny: false,
   };
@@ -4673,6 +4677,8 @@ function addManualSession() {
   if (isLearning) {
     data.learningMinutes = (data.learningMinutes || 0) + minutes;
     data.lastUsedLearningGenre = genre;
+  } else if (isCreative) {
+    data.creativeMinutes = (data.creativeMinutes || 0) + minutes;
   } else {
     data.totalMinutes += minutes;
   }
@@ -4691,13 +4697,16 @@ function addManualSession() {
   document.getElementById('session-setup').style.display = 'none';
   document.getElementById('session-running').style.display = 'none';
   document.getElementById('session-result').style.display = 'block';
-  document.getElementById('result-title').textContent = '学習時間を記録しました';
-  document.getElementById('result-time').innerHTML = `<span style="font-size:1.8rem; color:var(--accent2);">${minutes}分</span> 学習を記録しました`;
+  const modeLabel = isLearning ? '学習' : isCreative ? '創作' : '読書';
+  document.getElementById('result-title').textContent = `${modeLabel}時間を記録しました`;
+  document.getElementById('result-time').innerHTML = `<span style="font-size:1.8rem; color:var(--accent2);">${minutes}分</span> ${modeLabel}を記録しました`;
+  const noteLabel = isLearning ? '学習メモ' : isCreative ? '制作メモ' : '今日の問い';
   const preNoteHtml = preNote
-    ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">今日の問い: ${escapeHtml(preNote)}</div>` : '';
-  document.getElementById('result-card').innerHTML = preNoteHtml + '<div style="margin-bottom:0.5rem;">• タイマー外の学習も、今日の積み上げとして記録しました</div>';
+    ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">${noteLabel}: ${escapeHtml(preNote)}</div>` : '';
+  const typeHtml = isCreative ? `<div style="margin-bottom:0.5rem;">• 作業種別: ${escapeHtml(CREATIVE_TYPE_LABELS[creativeType] || 'その他')}</div>` : '';
+  document.getElementById('result-card').innerHTML = preNoteHtml + typeHtml + `<div style="margin-bottom:0.5rem;">• タイマー外の${modeLabel}も、今日の積み上げとして記録しました</div>`;
   document.getElementById('result-xp').innerHTML = `+${xpGained} XP <span style="font-size:1rem; color:var(--text2);">(合計: ${data.xp} XP)</span>`;
-  document.getElementById('result-question').textContent = 'この学習時間で得たことを、次はどの本や問いにつなげますか？';
+  document.getElementById('result-question').textContent = `この${modeLabel}時間で得たことを、次はどの本や問いにつなげますか？`;
 
   const badgeBox = document.getElementById('result-badges');
   const cont = document.getElementById('result-badges-content');
