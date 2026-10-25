@@ -286,7 +286,7 @@ td.time { color: var(--accent); font-weight: 600; text-align: right; white-space
 
 <script>
 const TYPE_LABELS = { reading: '読書', learning: '学習', creative: '創作' };
-const CREATIVE_LABELS = { game: 'ゲーム制作', writing: '執筆', art: '絵・デザイン', other: '創作' };
+const CREATIVE_LABELS = { game: 'ゲーム構想', prototype: 'プロトタイプ', scenario: 'シナリオ', world: '世界観・設定', art: 'ビジュアル・素材', other: 'その他', writing: '執筆' };
 const state = { days: 30, itemKey: '' };
 
 function loadData() {
@@ -356,7 +356,8 @@ function getBook(session) {
 function getContentLabel(session) {
   if (session._type === 'learning') return session.learningGenre || session.genre || '学習';
   if (session._type === 'creative') {
-    const label = CREATIVE_LABELS[session.creativeType] || '創作';
+    const custom = Array.isArray(data.customCreativeTypes) ? data.customCreativeTypes.find(item => item.id === session.creativeType) : null;
+    const label = CREATIVE_LABELS[session.creativeType] || custom?.label || '創作';
     const book = getBook(session);
     return book ? `${label} ／ ${book.title}` : label;
   }

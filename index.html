@@ -1772,6 +1772,14 @@ body.home-active nav {
 }
 .learning-genre-row input,
 .learning-genre-row select { margin: 0; }
+.creative-type-row {
+  align-items: center;
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: minmax(120px, 1fr) auto auto;
+  margin-bottom: 0.45rem;
+}
+.creative-type-row input { margin: 0; }
 .activity-analysis-controls {
   display: flex;
   flex-wrap: wrap;
@@ -2415,18 +2423,15 @@ nav button {
     <div class="card" id="creative-session-card" style="display:none;">
       <h2>制作テーマ</h2>
       <label for="creative-work-type">作業の種類</label>
-      <select id="creative-work-type">
-        <option value="game">ゲーム構想</option>
-        <option value="prototype">プロトタイプ</option>
-        <option value="scenario">シナリオ</option>
-        <option value="world">世界観・設定</option>
-        <option value="art">ビジュアル・素材</option>
-        <option value="other">その他</option>
-      </select>
+      <select id="creative-work-type"></select>
       <label for="creative-session-note">今日つくるもの（任意）</label>
       <textarea id="creative-session-note" maxlength="140" rows="3"
         placeholder="例：読んだ章の発想から、探索ゲームのコアループを組む" style="resize:none;"></textarea>
       <p class="text-sm">アイデアや、試作したい作品の方向を残せます</p>
+      <label for="creative-type-input" style="margin-top:0.8rem;">新しい作業の種類を追加</label>
+      <input type="text" id="creative-type-input" maxlength="20" placeholder="例：作曲、ドット絵、設定資料集">
+      <button class="btn btn-outline btn-sm" onclick="addCreativeType()">種類を追加</button>
+      <div id="creative-type-manager" style="margin-top:0.8rem;"></div>
     </div>
     <div class="card" id="learning-session-note-card" style="display:none;">
       <h2>今日学ぶこと（任意）</h2>
@@ -2644,7 +2649,7 @@ const DB = {
 
 // 既存データに新フィールドを安全にマージ
 const DEFAULT_LEARNING_GENRES = ['古典シリア語', 'データサイエンス講座', 'PCハードウェア', 'AI'];
-const _defaults = { lastUsedBookId: null, lastUsedLearningGenre: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistoryVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: [...DEFAULT_LEARNING_GENRES], learningGenreStatuses: {} };
+const _defaults = { lastUsedBookId: null, lastUsedLearningGenre: null, lastUsedDrink: '☕', dailyGoalMinutes: 60, recoveryTokens: 0, recoveryRulesVersion: 0, streakHistoryVersion: 0, streakHistory: {}, tinyCount: 0, quizAnswers: [], creativeMinutes: 0, learningMinutes: 0, learningGenres: [...DEFAULT_LEARNING_GENRES], learningGenreStatuses: {}, customCreativeTypes: [] };
 let data = Object.assign({}, _defaults, DB.load());
 if (!Array.isArray(data.books)) data.books = [];
 if (!Array.isArray(data.sessions)) data.sessions = [];
@@ -3395,7 +3400,7 @@ function renderTodayItemTimes(todaySessions) {
       return;
     }
     if (session.type === 'creative') {
-      const label = CREATIVE_TYPE_LABELS[session.creativeType] || '創作';
+      const label = getCreativeTypeLabel(session.creativeType, '創作');
       creativeTotals.set(label, (creativeTotals.get(label) || 0) + minutes);
       return;
     }
@@ -3910,6 +3915,102 @@ const CREATIVE_TYPE_LABELS = {
   art: 'ビジュアル・素材',
   other: 'その他',
 };
+// 追加した種類は { id, label, hidden } で保存し、削除しても過去の記録の表示名は残す
+function getCustomCreativeTypes() {
+  if (!Array.isArray(data.customCreativeTypes)) data.customCreativeTypes = [];
+  return data.customCreativeTypes;
+}
+function getCreativeTypeLabel(type, fallback = '創作') {
+  if (CREATIVE_TYPE_LABELS[type]) return CREATIVE_TYPE_LABELS[type];
+  return getCustomCreativeTypes().find(item => item.id === type)?.label || fallback;
+}
+function renderCreativeTypeOptions(selected) {
+  const sel = document.getElementById('creative-work-type');
+  if (!sel) return;
+  const current = selected ?? sel.value ?? 'game';
+  const options = Object.entries(CREATIVE_TYPE_LABELS).map(([id, label]) => ({ id, label }));
+  getCustomCreativeTypes().forEach(item => {
+    if (!item.hidden || item.id === current) options.push(item);
+  });
+  sel.innerHTML = options.map(({ id, label }) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join('');
+  sel.value = options.some(item => item.id === current) ? current : 'game';
+  renderCreativeTypeManager();
+}
+function renderCreativeTypeManager() {
+  const wrap = document.getElementById('creative-type-manager');
+  if (!wrap) return;
+  const visible = getCustomCreativeTypes().filter(item => !item.hidden);
+  if (visible.length === 0) {
+    wrap.innerHTML = '';
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="text-sm" style="margin-bottom:0.45rem;">追加した種類</div>
+    ${visible.map(item => `
+      <div class="creative-type-row">
+        <input type="text" id="creative-type-edit-${escapeHtml(item.id)}" value="${escapeHtml(item.label)}" maxlength="20" aria-label="${escapeHtml(item.label)}を編集">
+        <button class="btn btn-outline btn-sm" onclick="editCreativeType('${item.id}')">更新</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCreativeType('${item.id}')">削除</button>
+      </div>
+    `).join('')}
+  `;
+}
+function creativeLabelExists(label, exceptId = null) {
+  return Object.values(CREATIVE_TYPE_LABELS).includes(label)
+    || getCustomCreativeTypes().some(item => !item.hidden && item.id !== exceptId && item.label === label);
+}
+function addCreativeType() {
+  const input = document.getElementById('creative-type-input');
+  const label = input?.value.trim();
+  if (!label) {
+    input?.focus();
+    return;
+  }
+  if (creativeLabelExists(label)) {
+    alert('同じ名前の種類がすでにあります');
+    input.focus();
+    return;
+  }
+  const types = getCustomCreativeTypes();
+  const restored = types.find(item => item.hidden && item.label === label);
+  let id;
+  if (restored) {
+    restored.hidden = false;
+    id = restored.id;
+  } else {
+    id = `custom_${Date.now()}`;
+    types.push({ id, label });
+  }
+  DB.save(data);
+  input.value = '';
+  renderCreativeTypeOptions(id);
+}
+function editCreativeType(id) {
+  const item = getCustomCreativeTypes().find(type => type.id === id);
+  const input = document.getElementById(`creative-type-edit-${id}`);
+  const label = input?.value.trim();
+  if (!item || !label) {
+    input?.focus();
+    return;
+  }
+  if (creativeLabelExists(label, id)) {
+    alert('同じ名前の種類がすでにあります');
+    input.focus();
+    return;
+  }
+  item.label = label;
+  DB.save(data);
+  renderCreativeTypeOptions();
+}
+function deleteCreativeType(id) {
+  const item = getCustomCreativeTypes().find(type => type.id === id);
+  if (!item) return;
+  if (!confirm(`「${item.label}」を削除しますか？過去の創作記録は残ります。`)) return;
+  item.hidden = true;
+  DB.save(data);
+  const sel = document.getElementById('creative-work-type');
+  renderCreativeTypeOptions(sel?.value === id ? 'game' : undefined);
+}
 const CREATIVE_QUOTES = [
   '読んだ知識は、形にした瞬間から自分の素材になる。',
   '今日は完成よりも、動く小さな核を作りましょう。',
@@ -4140,6 +4241,7 @@ function updateSessionModeUI() {
   if (bookCard) bookCard.style.display = (isCreative || isLearning) ? 'none' : 'block';
   const creativeCard = document.getElementById('creative-session-card');
   if (creativeCard) creativeCard.style.display = isCreative ? 'block' : 'none';
+  if (isCreative) renderCreativeTypeOptions();
   ['learning-genre-selection-card', 'learning-session-note-card', 'learning-genre-manager-card'].forEach(id => {
     const card = document.getElementById(id);
     if (card) card.style.display = isLearning ? 'block' : 'none';
@@ -4325,7 +4427,7 @@ function applySessionStateToForm(sessionState) {
   const noteEl = document.getElementById('session-pre-note');
   if (noteEl) noteEl.value = sessionState.preNote || '';
   const creativeTypeEl = document.getElementById('creative-work-type');
-  if (creativeTypeEl) creativeTypeEl.value = sessionState.creativeType || 'game';
+  if (creativeTypeEl) renderCreativeTypeOptions(sessionState.creativeType || 'game');
   const creativeNoteEl = document.getElementById('creative-session-note');
   if (creativeNoteEl) creativeNoteEl.value = sessionState.creativeNote || '';
   renderLearningGenreOptions(sessionState.learningGenre || '');
@@ -4365,7 +4467,7 @@ function saveActiveSession(overrides = {}) {
   const snapshotBookId = snapshotMode === 'reading' ? (overrides.bookId ?? bookId) : '';
   let snapshotBookName = overrides.bookName ?? bookName;
   if (snapshotMode === 'creative' && !hasOverride('bookName')) {
-    snapshotBookName = `創作 ／ ${CREATIVE_TYPE_LABELS[snapshotCreativeType] || 'その他'}`;
+    snapshotBookName = `創作 ／ ${getCreativeTypeLabel(snapshotCreativeType, 'その他')}`;
   } else if (snapshotMode === 'learning' && !hasOverride('bookName')) {
     snapshotBookName = `学習 ／ ${snapshotLearningGenre}`;
   }
@@ -4449,7 +4551,7 @@ function startSession() {
   const displayName = mode === 'learning'
     ? `学習 ／ ${learningGenre}`
     : mode === 'creative'
-    ? `創作 ／ ${CREATIVE_TYPE_LABELS[creativeType] || 'その他'}`
+    ? `創作 ／ ${getCreativeTypeLabel(creativeType, 'その他')}`
     : bookName;
   document.getElementById('session-book-name').textContent = displayName;
   const target = parseInt(document.getElementById('target-minutes').value);
@@ -4703,7 +4805,7 @@ function addManualSession() {
   const noteLabel = isLearning ? '学習メモ' : isCreative ? '制作メモ' : '今日の問い';
   const preNoteHtml = preNote
     ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">${noteLabel}: ${escapeHtml(preNote)}</div>` : '';
-  const typeHtml = isCreative ? `<div style="margin-bottom:0.5rem;">• 作業種別: ${escapeHtml(CREATIVE_TYPE_LABELS[creativeType] || 'その他')}</div>` : '';
+  const typeHtml = isCreative ? `<div style="margin-bottom:0.5rem;">• 作業種別: ${escapeHtml(getCreativeTypeLabel(creativeType, 'その他'))}</div>` : '';
   document.getElementById('result-card').innerHTML = preNoteHtml + typeHtml + `<div style="margin-bottom:0.5rem;">• タイマー外の${modeLabel}も、今日の積み上げとして記録しました</div>`;
   document.getElementById('result-xp').innerHTML = `+${xpGained} XP <span style="font-size:1rem; color:var(--text2);">(合計: ${data.xp} XP)</span>`;
   document.getElementById('result-question').textContent = `この${modeLabel}時間で得たことを、次はどの本や問いにつなげますか？`;
@@ -4845,7 +4947,7 @@ function endSession() {
       ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">学習メモ: ${escapeHtml(currentLearningNote)}</div>` : '';
     resultCardHtml = `<div style="margin-bottom:0.5rem;">• 学習ジャンル: ${escapeHtml(genre)}</div>` + noteHtml + learningHarvests.map(h => `<div style="margin-bottom:0.5rem;">• ${h}</div>`).join('');
   } else if (mode === 'creative') {
-    const creativeLabel = CREATIVE_TYPE_LABELS[session.creativeType] || '創作';
+    const creativeLabel = getCreativeTypeLabel(session.creativeType, '創作');
     const creativeHarvests = [
       '読書で得た素材を作品の形へ変換しました',
       'アイデアを手で扱える制作単位まで近づけました',
@@ -5286,7 +5388,7 @@ function getSessionContent(session) {
     return session.learningGenre || session.genre || '学習';
   }
   if (session.type === 'creative') {
-    const creativeLabel = CREATIVE_TYPE_LABELS[session.creativeType] || '創造';
+    const creativeLabel = getCreativeTypeLabel(session.creativeType, '創造');
     const book = data.books.find(item => item.id === session.bookId);
     return book ? `${creativeLabel} ／ ${book.title}` : creativeLabel;
   }
