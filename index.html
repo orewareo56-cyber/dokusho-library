@@ -594,6 +594,12 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
 .level-rank-10 { color: #ffd98a; text-shadow: 0 0 22px rgba(255,217,138,0.54); }
 .level-rank-11 { color: #9ed0ff; text-shadow: 0 0 24px rgba(158,208,255,0.58); }
 .level-rank-12 { color: #ffffff; text-shadow: 0 0 12px #75e0cf, 0 0 28px rgba(245,209,123,0.68); }
+.level-rank-13 { color: #f2c98b; text-shadow: 0 0 14px rgba(242,201,139,0.6), 0 0 28px rgba(42,157,143,0.5); }
+.level-rank-14 { color: #b8f0e6; text-shadow: 0 0 16px rgba(184,240,230,0.62), 0 0 30px rgba(233,196,106,0.5); }
+.level-rank-15 { color: #ffe3a3; text-shadow: 0 0 16px rgba(255,227,163,0.66), 0 0 32px rgba(196,95,157,0.52); }
+.level-rank-16 { color: #e0c8ff; text-shadow: 0 0 18px rgba(224,200,255,0.68), 0 0 34px rgba(76,201,240,0.55); }
+.level-rank-17 { color: #ffffff; text-shadow: 0 0 14px #f9c74f, 0 0 36px rgba(123,97,255,0.7); }
+.level-rank-18 { color: #ffffff; text-shadow: 0 0 10px #ffd166, 0 0 24px #75e0cf, 0 0 44px rgba(245,183,255,0.75); }
 .level-detail-toggle {
   margin-top: 0.85rem;
 }
@@ -2421,7 +2427,7 @@ nav button {
       <label for="creative-session-note">今日つくるもの（任意）</label>
       <textarea id="creative-session-note" maxlength="140" rows="3"
         placeholder="例：読んだ章の発想から、探索ゲームのコアループを組む" style="resize:none;"></textarea>
-      <p class="text-sm">読書から生まれたアイデアや、試作したい作品の方向を残せます</p>
+      <p class="text-sm">アイデアや、試作したい作品の方向を残せます</p>
     </div>
     <div class="card" id="learning-session-note-card" style="display:none;">
       <h2>今日学ぶこと（任意）</h2>
@@ -2777,6 +2783,12 @@ const LEVELS = [
   { name: '万巻の航海者', xp: 26000 },
   { name: '知の星図を描く者', xp: 36000 },
   { name: '仮想図書館の大賢者', xp: 50000 },
+  { name: '翻訳運動の継承者', xp: 65000 },
+  { name: '知恵の館の司書長', xp: 85000 },
+  { name: '写本をつなぐ碩学', xp: 110000 },
+  { name: '千夜の学匠', xp: 140000 },
+  { name: '文明を渡す架け橋', xp: 180000 },
+  { name: '知の大図書館そのもの', xp: 230000 },
 ];
 
 function getLevel(xp) {
@@ -2879,8 +2891,8 @@ function creativeMinutesSinceDays(d, days) {
 function creativeTypeCount(d, type) {
   return creativeSessions(d).filter(s => s.creativeType === type).length;
 }
-function creativeSourceBooks(d) {
-  return new Set(creativeSessions(d).map(s => s.bookId).filter(Boolean)).size;
+function creativeTypeVariety(d) {
+  return new Set(creativeSessions(d).map(s => s.creativeType).filter(Boolean)).size;
 }
 function creativeNoteCount(d) {
   return creativeSessions(d).filter(s => s.creativeNote && String(s.creativeNote).trim()).length;
@@ -2918,6 +2930,31 @@ function maxSessionMinutes(d) {
 }
 function learningGenreSessionCount(d, keyword) {
   return learningSessions(d).filter(s => String(s.learningGenre || s.genre || '').includes(keyword)).length;
+}
+function doneLearningGenreCount(d) {
+  return Object.values(d.learningGenreStatuses || {}).filter(status => status === 'done').length;
+}
+function sessionCountByLocalHour(d, test) {
+  return d.sessions.filter(s => test(new Date(s.date).getHours())).length;
+}
+function daysOverMinutes(d, threshold) {
+  const buckets = {};
+  d.sessions.forEach(s => {
+    const key = new Date(s.date).toDateString();
+    buckets[key] = (buckets[key] || 0) + (Number(s.minutes) || 0);
+  });
+  return Object.values(buckets).filter(minutes => minutes >= threshold).length;
+}
+function tripleModeDays(d) {
+  const modes = {};
+  d.sessions.forEach(s => {
+    const key = new Date(s.date).toDateString();
+    (modes[key] = modes[key] || new Set()).add(s.type || 'reading');
+  });
+  return Object.values(modes).filter(set => ['reading', 'learning', 'creative'].every(type => set.has(type))).length;
+}
+function weeklyModeVariety(d) {
+  return new Set(sessionsSinceDays(d, 7).map(s => s.type || 'reading')).size;
 }
 
 const BADGES = [
@@ -2977,7 +3014,7 @@ const BADGES = [
   { id: 'creative_minutes_120', name: '二時間の試作', desc: '創作時間を合計120分記録', progressFn: d => ({ current: creativeMinutes(d), max: 120 }) },
   { id: 'creative_minutes_600', name: '十時間の工房', desc: '創作時間を合計600分記録', progressFn: d => ({ current: creativeMinutes(d), max: 600 }) },
   { id: 'creative_game_3', name: 'ゲーム構想家', desc: 'ゲーム構想セッションを3回完了', progressFn: d => ({ current: creativeTypeCount(d, 'game'), max: 3 }) },
-  { id: 'creative_source_3', name: '読書から作品へ', desc: '3冊以上をベースに創作セッションを記録', progressFn: d => ({ current: creativeSourceBooks(d), max: 3 }) },
+  { id: 'creative_source_3', name: '読書から作品へ', desc: '3種類以上の作業で創作セッションを記録', progressFn: d => ({ current: creativeTypeVariety(d), max: 3 }) },
   { id: 'creative_note_5', name: '制作メモの束', desc: '創作メモ付きセッションを5回完了', progressFn: d => ({ current: creativeNoteCount(d), max: 5 }) },
   { id: 'weekly_creative_180', name: 'ウィークリーミッション: 創作180分', desc: '直近7日で創作を180分記録', progressFn: d => ({ current: creativeMinutesSinceDays(d, 7), max: 180 }) },
   { id: 'monthly_creative_600', name: 'マンスリーミッション: 創作600分', desc: '直近30日で創作を600分記録', progressFn: d => ({ current: creativeMinutesSinceDays(d, 30), max: 600 }) },
@@ -3034,7 +3071,83 @@ const BADGES = [
   { id: 'books_done_15', name: '十五冊の読了棚', desc: '本を15冊読了', progressFn: d => ({ current: doneBooks(d), max: 15 }) },
   { id: 'learning_datascience_50', name: 'データを読む五十眼', desc: 'データサイエンスの学習を50回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'データサイエンス'), max: 50 }) },
   { id: 'learning_itpassport_50', name: 'IT基盤の築城師', desc: 'ITパスポートの学習を50回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'ITパスポート'), max: 50 }) },
-  { id: 'learning_syriac_25', name: 'シリア語二十五の刻印', desc: 'シリア語の学習を25回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'シリア語'), max: 25 }) },
+  { id: 'learning_syriac_25', name: 'シリア語二十五の刻印', desc: 'シリア語の学習を25回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'シリア語'), max: 25 }) },  { id: 'streak_150', name: '百五十日の灯', desc: '150日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 150 }) },
+  { id: 'streak_180', name: '半年の守火', desc: '180日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 180 }) },
+  { id: 'streak_250', name: '二百五十日の巡礼', desc: '250日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 250 }) },
+  { id: 'streak_365', name: '一年の書灯', desc: '365日連続でセッションを記録', progressFn: d => ({ current: d.streak, max: 365 }) },
+  { id: 'active_days_200', name: '二百日の書窓', desc: '通算200日セッションを記録', progressFn: d => ({ current: allTimeActiveDays(d), max: 200 }) },
+  { id: 'active_days_365', name: '一年分の足跡', desc: '通算365日セッションを記録', progressFn: d => ({ current: allTimeActiveDays(d), max: 365 }) },
+  { id: 'recovery_stock_10', name: '十枚の盾', desc: 'リカバリー権を10個たくわえる', progressFn: d => ({ current: d.recoveryTokens || 0, max: 10 }) },
+  { id: 'session_400', name: '四百の栞', desc: 'セッション400回達成', progressFn: d => ({ current: d.sessions.length, max: 400 }) },
+  { id: 'session_500', name: '五百夜の閲覧席', desc: 'セッション500回達成', progressFn: d => ({ current: d.sessions.length, max: 500 }) },
+  { id: 'session_750', name: '七百五十の書見台', desc: 'セッション750回達成', progressFn: d => ({ current: d.sessions.length, max: 750 }) },
+  { id: 'session_1000', name: '千夜一夜の記録', desc: 'セッション1000回達成', progressFn: d => ({ current: d.sessions.length, max: 1000 }) },
+  { id: 'progress_15000', name: '二百五十時間の知的生活', desc: '読書・創作・学習を合計15000分記録', progressFn: d => ({ current: totalProgressMinutes(d), max: 15000 }) },
+  { id: 'progress_20000', name: '二万分の書海', desc: '読書・創作・学習を合計20000分記録', progressFn: d => ({ current: totalProgressMinutes(d), max: 20000 }) },
+  { id: 'progress_30000', name: '五百時間の碩学', desc: '読書・創作・学習を合計30000分記録', progressFn: d => ({ current: totalProgressMinutes(d), max: 30000 }) },
+  { id: 'progress_50000', name: '五万分の大図書館', desc: '読書・創作・学習を合計50000分記録', progressFn: d => ({ current: totalProgressMinutes(d), max: 50000 }) },
+  { id: 'time_5000', name: '五千分の読書', desc: '総読書時間5000分達成', progressFn: d => ({ current: d.totalMinutes, max: 5000 }) },
+  { id: 'time_10000', name: '一万分の書見', desc: '総読書時間10000分達成', progressFn: d => ({ current: d.totalMinutes, max: 10000 }) },
+  { id: 'books_30', name: '三十冊の書架', desc: '本を30冊登録', progressFn: d => ({ current: d.books.length, max: 30 }) },
+  { id: 'books_done_20', name: '二十冊の読了棚', desc: '本を20冊読了', progressFn: d => ({ current: doneBooks(d), max: 20 }) },
+  { id: 'books_done_30', name: '三十冊の読了録', desc: '本を30冊読了', progressFn: d => ({ current: doneBooks(d), max: 30 }) },
+  { id: 'genre_science_100', name: '科学史の百夜', desc: '科学史ジャンルで100セッション', progressFn: d => ({ current: countGenreSessions(d, '科学史'), max: 100 }) },
+  { id: 'genre_science_200', name: '科学史の二百夜', desc: '科学史ジャンルで200セッション', progressFn: d => ({ current: countGenreSessions(d, '科学史'), max: 200 }) },
+  { id: 'genre_history_50', name: '五十の年代記', desc: '歴史ジャンルで50セッション', progressFn: d => ({ current: countGenreSessions(d, '歴史'), max: 50 }) },
+  { id: 'genre_philosophy_50', name: '五十の概念', desc: '哲学ジャンルで50セッション', progressFn: d => ({ current: countGenreSessions(d, '哲学'), max: 50 }) },
+  { id: 'daily_480', name: '八時間の書斎', desc: '1日に480分以上読書・創作・学習', progressFn: d => ({ current: maxDailyMinutes(d), max: 480 }) },
+  { id: 'daily_600', name: '十時間の籠城', desc: '1日に600分以上読書・創作・学習', progressFn: d => ({ current: maxDailyMinutes(d), max: 600 }) },
+  { id: 'daily_goal_10', name: '目標達成の十夜', desc: '1日の目標時間を10日達成', progressFn: d => ({ current: dailyGoalDays(d), max: 10 }) },
+  { id: 'daily_goal_30', name: '目標達成の満月', desc: '1日の目標時間を30日達成', progressFn: d => ({ current: dailyGoalDays(d), max: 30 }) },
+  { id: 'daily_goal_60', name: '目標達成の二月', desc: '1日の目標時間を60日達成', progressFn: d => ({ current: dailyGoalDays(d), max: 60 }) },
+  { id: 'days_300_50', name: '五時間の日々', desc: '1日300分以上の日を通算50日', progressFn: d => ({ current: daysOverMinutes(d, 300), max: 50 }) },
+  { id: 'long_session_180', name: '三時間の深潜り', desc: '1回のセッションで180分記録', progressFn: d => ({ current: maxSessionMinutes(d), max: 180 }) },
+  { id: 'dawn_10', name: '暁の閲覧席', desc: '朝4〜7時台にセッションを10回記録', progressFn: d => ({ current: sessionCountByLocalHour(d, h => h >= 4 && h < 8), max: 10 }) },
+  { id: 'dawn_30', name: '暁の常連', desc: '朝4〜7時台にセッションを30回記録', progressFn: d => ({ current: sessionCountByLocalHour(d, h => h >= 4 && h < 8), max: 30 }) },
+  { id: 'night_100', name: '夜の書灯', desc: '21時以降にセッションを100回記録', progressFn: d => ({ current: sessionCountByLocalHour(d, h => h >= 21), max: 100 }) },
+  { id: 'triple_mode_1', name: '三つの道', desc: '1日で読書・学習・創作のすべてを記録', progressFn: d => ({ current: tripleModeDays(d), max: 1 }) },
+  { id: 'triple_mode_20', name: '三つの道の均衡', desc: '読書・学習・創作をすべて記録した日を20日', progressFn: d => ({ current: tripleModeDays(d), max: 20 }) },
+  { id: 'weekly_triple', name: 'ウィークリーミッション: 三つの道', desc: '直近7日で読書・学習・創作のすべてを記録', progressFn: d => ({ current: weeklyModeVariety(d), max: 3 }) },
+  { id: 'weekly_minutes_1200', name: 'ウィークリーミッション: 1200分', desc: '直近7日で読書・創作・学習1200分', progressFn: d => ({ current: minutesSinceDays(d, 7), max: 1200 }) },
+  { id: 'monthly_minutes_3000', name: 'マンスリーミッション: 3000分', desc: '直近30日で読書・創作・学習3000分', progressFn: d => ({ current: minutesSinceDays(d, 30), max: 3000 }) },
+  { id: 'monthly_active_days_30', name: 'マンスリーミッション: 皆勤', desc: '直近30日のすべての日に記録', progressFn: d => ({ current: activeDaysSinceDays(d, 30), max: 30 }) },
+  { id: 'learning_200', name: '二百回の自習室', desc: '学習セッションを200回完了', progressFn: d => ({ current: learningSessions(d).length, max: 200 }) },
+  { id: 'learning_300', name: '三百回の探究録', desc: '学習セッションを300回完了', progressFn: d => ({ current: learningSessions(d).length, max: 300 }) },
+  { id: 'learning_minutes_10000', name: '一万分の学知', desc: '学習時間を合計10000分記録', progressFn: d => ({ current: learningMinutes(d), max: 10000 }) },
+  { id: 'learning_minutes_15000', name: '一万五千分の研究室', desc: '学習時間を合計15000分記録', progressFn: d => ({ current: learningMinutes(d), max: 15000 }) },
+  { id: 'learning_genres_6', name: '六分野を渡る学び', desc: '6種類以上の学習ジャンルで記録', progressFn: d => ({ current: learningGenreVariety(d), max: 6 }) },
+  { id: 'learning_genre_done_1', name: '修了の証', desc: '学習ジャンルを1つ「完了」にする', progressFn: d => ({ current: doneLearningGenreCount(d), max: 1 }) },
+  { id: 'learning_genre_done_3', name: '三つの修了証', desc: '学習ジャンルを3つ「完了」にする', progressFn: d => ({ current: doneLearningGenreCount(d), max: 3 }) },
+  { id: 'learning_datascience_100', name: 'データを読む百眼', desc: 'データサイエンスの学習を100回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'データサイエンス'), max: 100 }) },
+  { id: 'learning_syriac_50', name: 'シリア語五十の写本', desc: 'シリア語の学習を50回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'シリア語'), max: 50 }) },
+  { id: 'learning_security_10', name: '情報の城壁', desc: '情報セキュリティの学習を10回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'セキュリティ'), max: 10 }) },
+  { id: 'learning_network_10', name: '通信路の測量士', desc: 'ネットワークの学習を10回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'ネットワーク'), max: 10 }) },
+  { id: 'learning_ai_10', name: '思考する機械の観察者', desc: 'AIの学習を10回記録', progressFn: d => ({ current: learningGenreSessionCount(d, 'AI'), max: 10 }) },
+  { id: 'learning_reflection_30', name: '内省の書簡', desc: '自己振り返りを30回記録', progressFn: d => ({ current: learningGenreSessionCount(d, '振り返り'), max: 30 }) },
+  { id: 'creative_50', name: '五十回の工房開き', desc: '創作セッションを50回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 50 }) },
+  { id: 'creative_100', name: '百回の工房', desc: '創作セッションを100回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 100 }) },
+  { id: 'creative_200', name: '二百回の制作録', desc: '創作セッションを200回完了', progressFn: d => ({ current: creativeSessions(d).length, max: 200 }) },
+  { id: 'creative_minutes_1200', name: '二十時間の試作', desc: '創作時間を合計1200分記録', progressFn: d => ({ current: creativeMinutes(d), max: 1200 }) },
+  { id: 'creative_minutes_3000', name: '五十時間の工房', desc: '創作時間を合計3000分記録', progressFn: d => ({ current: creativeMinutes(d), max: 3000 }) },
+  { id: 'creative_minutes_5000', name: '五千分の制作', desc: '創作時間を合計5000分記録', progressFn: d => ({ current: creativeMinutes(d), max: 5000 }) },
+  { id: 'creative_minutes_7500', name: '七千五百分の作品群', desc: '創作時間を合計7500分記録', progressFn: d => ({ current: creativeMinutes(d), max: 7500 }) },
+  { id: 'creative_minutes_10000', name: '一万分の創造者', desc: '創作時間を合計10000分記録', progressFn: d => ({ current: creativeMinutes(d), max: 10000 }) },
+  { id: 'creative_types_all', name: '六つの工具', desc: '6種類すべての作業で創作を記録', progressFn: d => ({ current: creativeTypeVariety(d), max: 6 }) },
+  { id: 'creative_prototype_50', name: 'プロトタイプ職人', desc: 'プロトタイプを50回記録', progressFn: d => ({ current: creativeTypeCount(d, 'prototype'), max: 50 }) },
+  { id: 'creative_scenario_50', name: '物語を紡ぐ手', desc: 'シナリオを50回記録', progressFn: d => ({ current: creativeTypeCount(d, 'scenario'), max: 50 }) },
+  { id: 'creative_art_30', name: '彩色写本師', desc: 'ビジュアル・素材を30回記録', progressFn: d => ({ current: creativeTypeCount(d, 'art'), max: 30 }) },
+  { id: 'creative_world_20', name: '世界を測る地図師', desc: '世界観・設定を20回記録', progressFn: d => ({ current: creativeTypeCount(d, 'world'), max: 20 }) },
+  { id: 'creative_game_30', name: 'ゲームデザイナーの卵', desc: 'ゲーム構想を30回記録', progressFn: d => ({ current: creativeTypeCount(d, 'game'), max: 30 }) },
+  { id: 'weekly_creative_600', name: 'ウィークリーミッション: 創作600分', desc: '直近7日で創作を600分記録', progressFn: d => ({ current: creativeMinutesSinceDays(d, 7), max: 600 }) },
+  { id: 'monthly_creative_1500', name: 'マンスリーミッション: 創作1500分', desc: '直近30日で創作を1500分記録', progressFn: d => ({ current: creativeMinutesSinceDays(d, 30), max: 1500 }) },
+  { id: 'level_scholar', name: '創造する学匠就任', desc: 'レベル「創造する学匠」に到達', progressFn: d => ({ current: d.xp, max: 18000 }) },
+  { id: 'level_voyager', name: '万巻の航海へ', desc: 'レベル「万巻の航海者」に到達', progressFn: d => ({ current: d.xp, max: 26000 }) },
+  { id: 'level_starmap', name: '知の星図を描く', desc: 'レベル「知の星図を描く者」に到達', progressFn: d => ({ current: d.xp, max: 36000 }) },
+  { id: 'level_grand_sage', name: '大賢者の戴冠', desc: 'レベル「仮想図書館の大賢者」に到達', progressFn: d => ({ current: d.xp, max: 50000 }) },
+  { id: 'level_heir', name: '翻訳運動を継ぐ', desc: 'レベル「翻訳運動の継承者」に到達', progressFn: d => ({ current: d.xp, max: 65000 }) },
+  { id: 'level_house_of_wisdom', name: '知恵の館の鍵', desc: 'レベル「知恵の館の司書長」に到達', progressFn: d => ({ current: d.xp, max: 85000 }) },
+  { id: 'level_thousand_nights', name: '千夜の学匠就任', desc: 'レベル「千夜の学匠」に到達', progressFn: d => ({ current: d.xp, max: 140000 }) },
+  { id: 'level_great_library', name: '大図書館の化身', desc: 'レベル「知の大図書館そのもの」に到達', progressFn: d => ({ current: d.xp, max: 230000 }) },
 ];
 
 function badgeProgress(badge, d) {
@@ -4026,9 +4139,7 @@ function updateSessionModeUI() {
     learningBtn.classList.toggle('btn-outline', !isLearning);
   }
   const bookCard = document.getElementById('session-book-card');
-  if (bookCard) bookCard.style.display = isLearning ? 'none' : 'block';
-  const heading = document.getElementById('session-book-heading');
-  if (heading) heading.textContent = isCreative ? 'ベースにする本を選ぶ' : '読む本を選ぶ';
+  if (bookCard) bookCard.style.display = (isCreative || isLearning) ? 'none' : 'block';
   const creativeCard = document.getElementById('creative-session-card');
   if (creativeCard) creativeCard.style.display = isCreative ? 'block' : 'none';
   ['learning-genre-selection-card', 'learning-session-note-card', 'learning-genre-manager-card'].forEach(id => {
@@ -4058,19 +4169,14 @@ function initSessionSetup() {
   const sel = document.getElementById('session-book-select');
   const isCreative = sessionMode === 'creative';
   const isLearning = sessionMode === 'learning';
-  sel.innerHTML = isCreative
-    ? '<option value="">-- ベースにする本を選んでください（任意） --</option>'
-    : '<option value="">-- 読書中の本を選んでください --</option>';
-  const selectableBooks = isCreative ? data.books : data.books.filter(b => b.status === 'reading');
-  selectableBooks.forEach(b => {
+  sel.innerHTML = '<option value="">-- 読書中の本を選んでください --</option>';
+  data.books.filter(b => b.status === 'reading').forEach(b => {
     const opt = document.createElement('option');
     opt.value = b.id; opt.textContent = b.title; opt.dataset.genre = b.genre;
     sel.appendChild(opt);
   });
   if (sel.options.length === 1) {
-    sel.innerHTML = isCreative
-      ? '<option value="">本棚に本がありません</option>'
-      : '<option value="">読書中の本がありません</option>';
+    sel.innerHTML = '<option value="">読書中の本がありません</option>';
   }
   sel.onchange = function() {
     const opt = this.selectedOptions[0];
@@ -4258,11 +4364,10 @@ function saveActiveSession(overrides = {}) {
   const snapshotMode = overrides.mode ?? sessionMode;
   const snapshotCreativeType = overrides.creativeType ?? (document.getElementById('creative-work-type')?.value || 'game');
   const snapshotLearningGenre = overrides.learningGenre ?? (document.getElementById('learning-genre-select')?.value || data.learningGenres?.[0] || '学習');
-  const snapshotBookId = snapshotMode === 'learning' ? '' : (overrides.bookId ?? bookId);
+  const snapshotBookId = snapshotMode === 'reading' ? (overrides.bookId ?? bookId) : '';
   let snapshotBookName = overrides.bookName ?? bookName;
   if (snapshotMode === 'creative' && !hasOverride('bookName')) {
-    const baseBookName = bookId ? bookName : 'ベース本未選択';
-    snapshotBookName = `${CREATIVE_TYPE_LABELS[snapshotCreativeType] || '創作'} ／ ${baseBookName}`;
+    snapshotBookName = `創作 ／ ${CREATIVE_TYPE_LABELS[snapshotCreativeType] || 'その他'}`;
   } else if (snapshotMode === 'learning' && !hasOverride('bookName')) {
     snapshotBookName = `学習 ／ ${snapshotLearningGenre}`;
   }
@@ -4331,7 +4436,7 @@ function startSession() {
   currentLearningNote = document.getElementById('learning-session-note')?.value || '';
   const bookSel = document.getElementById('session-book-select');
   const mode = ['creative', 'learning'].includes(sessionMode) ? sessionMode : 'reading';
-  const bookId = mode === 'learning' ? '' : bookSel.value;
+  const bookId = mode === 'reading' ? bookSel.value : '';
   const creativeType = document.getElementById('creative-work-type')?.value || 'game';
   const learningGenre = document.getElementById('learning-genre-select')?.value || '';
   if (mode === 'learning' && !learningGenre) {
@@ -4342,11 +4447,11 @@ function startSession() {
   sessionStart = Date.now();
   document.getElementById('session-setup').style.display = 'none';
   document.getElementById('session-running').style.display = 'block';
-  const bookName = bookId ? bookSel.selectedOptions[0].textContent : (mode === 'creative' ? 'ベース本未選択' : '（本未選択）');
+  const bookName = bookId ? bookSel.selectedOptions[0].textContent : '（本未選択）';
   const displayName = mode === 'learning'
     ? `学習 ／ ${learningGenre}`
     : mode === 'creative'
-    ? `${CREATIVE_TYPE_LABELS[creativeType] || '創作'} ／ ${bookName}`
+    ? `創作 ／ ${CREATIVE_TYPE_LABELS[creativeType] || 'その他'}`
     : bookName;
   document.getElementById('session-book-name').textContent = displayName;
   const target = parseInt(document.getElementById('target-minutes').value);
