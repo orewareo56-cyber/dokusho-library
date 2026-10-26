@@ -1593,6 +1593,25 @@ body.home-active nav {
 }
 .streak-day.read .streak-day-status { color: #9eeadd; }
 .streak-day.recovery .streak-day-status { color: #f5d98b; }
+.exchange-balance {
+  color: #f5d98b;
+  font-size: 0.85rem;
+  margin-bottom: 0.6rem;
+}
+.exchange-item {
+  border-top: 1px solid rgba(245, 209, 123, 0.18);
+  padding: 0.7rem 0 0.4rem;
+}
+.exchange-item h3 { margin: 0 0 0.2rem; font-size: 0.95rem; }
+.exchange-item p { margin: 0.2rem 0; }
+.exchange-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+.exchange-actions input { margin: 0; width: 5rem; }
+.xp-boost-active { color: #9eeadd; }
 .home-recovery-status {
   align-items: center;
   background: rgba(185, 132, 40, 0.14);
@@ -2588,6 +2607,32 @@ nav button {
     </div>
   </div>
 
+  <div class="card exchange-card">
+    <h2>リカバリー権の交換所</h2>
+    <div class="exchange-balance" id="exchange-balance"></div>
+    <div class="exchange-item">
+      <div>
+        <h3>XPに交換</h3>
+        <p class="text-sm">1個 → <span id="exchange-xp-rate"></span> XP（読書125分ぶん）</p>
+      </div>
+      <div class="exchange-actions">
+        <input type="number" id="exchange-xp-count" min="1" value="1" aria-label="交換するリカバリー権の数">
+        <button class="btn btn-sm" id="exchange-xp-btn" onclick="exchangeRecoveryForXp()">交換する</button>
+      </div>
+      <p class="text-sm" id="exchange-xp-preview"></p>
+    </div>
+    <div class="exchange-item">
+      <div>
+        <h3>XPブースト（今日1日）</h3>
+        <p class="text-sm">1個 → 今日の24時まで、セッションで得るXPが <span id="exchange-boost-rate"></span> 倍</p>
+      </div>
+      <div class="exchange-actions">
+        <button class="btn btn-sm" id="exchange-boost-btn" onclick="exchangeRecoveryForBoost()">ブーストする</button>
+      </div>
+      <p class="text-sm" id="exchange-boost-status"></p>
+    </div>
+  </div>
+
   <div class="card">
     <h2 id="badge-list-title">未獲得の実績</h2>
     <div class="badge-summary" id="badge-summary"></div>
@@ -3480,7 +3525,7 @@ function updateHome() {
   recEl.textContent = (data.recoveryTokens||0) > 0 ? `リカバリー ${data.recoveryTokens}` : '';
   const visibleRecovery = document.getElementById('home-recovery-visible');
   if (visibleRecovery) {
-    visibleRecovery.textContent = `◆ リカバリー権 ${data.recoveryTokens || 0}個`;
+    visibleRecovery.textContent = `◆ リカバリー権 ${data.recoveryTokens || 0}個${isXpBoostActive() ? ` ・ XPブースト中 ×${XP_BOOST_MULTIPLIER}（今日24時まで）` : ''}`;
     visibleRecovery.title = '連続記録が7日増えるごとに1個獲得します';
   }
 
@@ -4669,6 +4714,84 @@ function getLocalDateKey(value) {
   return `${year}-${month}-${day}`;
 }
 
+// ==================== リカバリー権の交換所 ====================
+// 1個 = 250XP（読書125分ぶん）。レベルの重みを保ちつつ、交換に意味が出る水準
+const RECOVERY_XP_RATE = 250;
+const XP_BOOST_MULTIPLIER = 1.5;
+
+function isXpBoostActive() {
+  return data.xpBoostDate === getLocalDateKey(Date.now());
+}
+function applyXpBoost(baseXp) {
+  return isXpBoostActive() ? Math.round(baseXp * XP_BOOST_MULTIPLIER) : baseXp;
+}
+function formatXpGain(xpGained, baseXp) {
+  const boostNote = xpGained > baseXp
+    ? ` <span class="xp-boost-active" style="font-size:1rem;">ブースト ×${XP_BOOST_MULTIPLIER}（+${xpGained - baseXp}）</span>`
+    : '';
+  return `+${xpGained} XP${boostNote} <span style="font-size:1rem; color:var(--text2);">(合計: ${data.xp} XP)</span>`;
+}
+
+function renderExchange() {
+  const tokens = data.recoveryTokens || 0;
+  const balance = document.getElementById('exchange-balance');
+  if (!balance) return;
+  balance.textContent = `◆ 手持ちのリカバリー権 ${tokens}個`;
+  document.getElementById('exchange-xp-rate').textContent = RECOVERY_XP_RATE;
+  document.getElementById('exchange-boost-rate').textContent = XP_BOOST_MULTIPLIER;
+  const countInput = document.getElementById('exchange-xp-count');
+  countInput.max = String(Math.max(1, tokens));
+  const count = Math.min(Math.max(1, parseInt(countInput.value || '1', 10) || 1), Math.max(1, tokens));
+  countInput.value = String(count);
+  countInput.oninput = () => {
+    const n = Math.max(0, parseInt(countInput.value || '0', 10) || 0);
+    document.getElementById('exchange-xp-preview').textContent = n > 0 ? `${n}個 → +${(n * RECOVERY_XP_RATE).toLocaleString()} XP` : '';
+  };
+  countInput.oninput();
+  countInput.disabled = tokens < 1;
+  document.getElementById('exchange-xp-btn').disabled = tokens < 1;
+  const boostActive = isXpBoostActive();
+  document.getElementById('exchange-boost-btn').disabled = boostActive || tokens < 1;
+  const boostStatus = document.getElementById('exchange-boost-status');
+  boostStatus.textContent = boostActive ? `ブースト中：今日の24時まで XP ×${XP_BOOST_MULTIPLIER}` : '';
+  boostStatus.classList.toggle('xp-boost-active', boostActive);
+}
+
+function exchangeRecoveryForXp() {
+  const tokens = data.recoveryTokens || 0;
+  const count = parseInt(document.getElementById('exchange-xp-count')?.value || '0', 10);
+  if (!count || count < 1 || count > tokens) {
+    alert(`1〜${tokens}個の範囲で入力してください`);
+    return;
+  }
+  const xp = count * RECOVERY_XP_RATE;
+  if (!confirm(`リカバリー権${count}個を ${xp.toLocaleString()} XP に交換しますか？（残り${tokens - count}個）`)) return;
+  const previousXp = data.xp;
+  data.recoveryTokens = tokens - count;
+  data.xp += xp;
+  data.recoveryExchangedForXp = (data.recoveryExchangedForXp || 0) + count;
+  const newBadges = checkBadges();
+  DB.save(data);
+  document.getElementById('exchange-xp-count').value = '1';
+  updateAchievements();
+  updateHome();
+  playProgressCelebration(newBadges, previousXp);
+  queueCelebration({ kicker: '交換完了', title: `+${xp.toLocaleString()} XP`, body: `リカバリー権${count}個をXPに交換しました。現在 ${data.xp.toLocaleString()} XP です。`, duration: 2400 });
+}
+
+function exchangeRecoveryForBoost() {
+  const tokens = data.recoveryTokens || 0;
+  if (tokens < 1 || isXpBoostActive()) return;
+  if (!confirm(`リカバリー権1個を使って、今日の24時までXPを${XP_BOOST_MULTIPLIER}倍にしますか？（残り${tokens - 1}個）`)) return;
+  data.recoveryTokens = tokens - 1;
+  data.xpBoostDate = getLocalDateKey(Date.now());
+  data.xpBoostCount = (data.xpBoostCount || 0) + 1;
+  DB.save(data);
+  updateAchievements();
+  updateHome();
+  queueCelebration({ kicker: 'XP BOOST', title: `今日はXP ×${XP_BOOST_MULTIPLIER}`, body: '24時までに記録したセッションのXPが増えます。読書・学習・創作を進めましょう。', duration: 2600 });
+}
+
 function rebuildRecentStreakHistory() {
   const streakDays = Math.max(0, Number(data.streak) || 0);
   if (!data.lastSessionDate || streakDays === 0) return;
@@ -4785,7 +4908,8 @@ function addManualSession() {
     data.totalMinutes += minutes;
   }
 
-  const xpGained = Math.max(10, minutes * 2);
+  const baseXp = Math.max(10, minutes * 2);
+  const xpGained = applyXpBoost(baseXp);
   const previousXp = data.xp;
   data.xp += xpGained;
 
@@ -4807,7 +4931,7 @@ function addManualSession() {
     ? `<div style="border-left:2px solid var(--accent); padding-left:0.7rem; margin-bottom:0.7rem; color:var(--text2); font-size:0.85rem;">${noteLabel}: ${escapeHtml(preNote)}</div>` : '';
   const typeHtml = isCreative ? `<div style="margin-bottom:0.5rem;">• 作業種別: ${escapeHtml(getCreativeTypeLabel(creativeType, 'その他'))}</div>` : '';
   document.getElementById('result-card').innerHTML = preNoteHtml + typeHtml + `<div style="margin-bottom:0.5rem;">• タイマー外の${modeLabel}も、今日の積み上げとして記録しました</div>`;
-  document.getElementById('result-xp').innerHTML = `+${xpGained} XP <span style="font-size:1rem; color:var(--text2);">(合計: ${data.xp} XP)</span>`;
+  document.getElementById('result-xp').innerHTML = formatXpGain(xpGained, baseXp);
   document.getElementById('result-question').textContent = `この${modeLabel}時間で得たことを、次はどの本や問いにつなげますか？`;
 
   const badgeBox = document.getElementById('result-badges');
@@ -4899,8 +5023,9 @@ function endSession() {
   // 1ページモードカウント
   if (wasTinySession) data.tinyCount = (data.tinyCount||0) + 1;
 
-  // XP計算（1分=2XP、最低10XP）
-  const xpGained = Math.max(10, minutes * 2);
+  // XP計算（1分=2XP、最低10XP。ブースト中は倍率を掛ける）
+  const baseXp = Math.max(10, minutes * 2);
+  const xpGained = applyXpBoost(baseXp);
   const previousXp = data.xp;
   data.xp += xpGained;
 
@@ -4965,7 +5090,7 @@ function endSession() {
   }
   document.getElementById('result-card').innerHTML = resultCardHtml;
 
-  document.getElementById('result-xp').innerHTML = `+${xpGained} XP <span style="font-size:1rem; color:var(--text2);">(合計: ${data.xp} XP)</span>`;
+  document.getElementById('result-xp').innerHTML = formatXpGain(xpGained, baseXp);
 
   // バッジ表示
   if (newBadges.length > 0) {
@@ -5543,6 +5668,7 @@ function setAchievementView(view) {
 }
 
 function updateAchievements() {
+  renderExchange();
   const unlockedNow = checkBadges();
   if (unlockedNow.length > 0) {
     DB.save(data);
