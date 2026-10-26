@@ -474,6 +474,10 @@ label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 
 .badge-view-toggle .btn {
   min-width: 104px;
 }
+@media (max-width: 720px) {
+  .badge-view-toggle { flex-wrap: nowrap; gap: 0.35rem; }
+  .badge-view-toggle .btn { flex: 1 1 0; min-width: 0; padding-left: 0.3rem; padding-right: 0.3rem; }
+}
 .badge-empty {
   color: var(--text2);
   line-height: 1.7;
@@ -2673,13 +2677,6 @@ nav button {
     </div>
   </div>
 
-  <div class="card collection-card">
-    <h2>収蔵室</h2>
-    <p class="text-sm">積み重ねに応じて、図書館に品物が収められます。銅・銀・金の3段階で育ちます。</p>
-    <div class="collection-summary" id="collection-summary"></div>
-    <div class="collection-grid" id="collection-grid"></div>
-  </div>
-
   <div class="card exchange-card">
     <h2>リカバリー権の交換所</h2>
     <div class="exchange-balance" id="exchange-balance"></div>
@@ -2712,8 +2709,14 @@ nav button {
     <div class="flex badge-view-toggle">
       <button class="btn btn-sm" id="badge-view-pending" onclick="setAchievementView('pending')">未獲得</button>
       <button class="btn btn-sm btn-outline" id="badge-view-earned" onclick="setAchievementView('earned')">獲得済み</button>
+      <button class="btn btn-sm btn-outline" id="badge-view-collection" onclick="setAchievementView('collection')">収蔵室</button>
     </div>
     <div class="badge-grid" id="badge-grid"></div>
+    <div class="collection-view" id="collection-view" style="display:none;">
+      <p class="text-sm">積み重ねに応じて、図書館に品物が収められます。銅・銀・金の3段階で育ちます。</p>
+      <div class="collection-summary" id="collection-summary"></div>
+      <div class="collection-grid" id="collection-grid"></div>
+    </div>
   </div>
 
   <div class="card achievement-data-card">
@@ -5887,7 +5890,7 @@ function renderLevelDetails() {
 }
 
 function setAchievementView(view) {
-  achievementView = view === 'earned' ? 'earned' : 'pending';
+  achievementView = ['earned', 'collection'].includes(view) ? view : 'pending';
   updateAchievements();
 }
 
@@ -5920,8 +5923,15 @@ function updateAchievements() {
   const earnedCount = earnedBadges.length;
   const visibleBadges = achievementView === 'earned' ? earnedBadges : pendingBadges;
   const listTitle = document.getElementById('badge-list-title');
-  if (listTitle) listTitle.textContent = achievementView === 'earned' ? '獲得済みの実績' : '未獲得の実績';
+  if (listTitle) listTitle.textContent = { earned: '獲得済みの実績', collection: '収蔵室', pending: '未獲得の実績' }[achievementView];
+  const isCollectionView = achievementView === 'collection';
+  grid.style.display = isCollectionView ? 'none' : '';
+  const collectionView = document.getElementById('collection-view');
+  if (collectionView) collectionView.style.display = isCollectionView ? 'block' : 'none';
+  const collectionBtn = document.getElementById('badge-view-collection');
+  if (collectionBtn) collectionBtn.classList.toggle('btn-outline', !isCollectionView);
   document.getElementById('badge-summary').innerHTML = `<strong>${earnedCount}</strong> / ${BADGES.length} 個の実績を獲得中`;
+  document.getElementById('badge-summary').style.display = isCollectionView ? 'none' : '';
   const pendingBtn = document.getElementById('badge-view-pending');
   const earnedBtn = document.getElementById('badge-view-earned');
   if (pendingBtn && earnedBtn) {
