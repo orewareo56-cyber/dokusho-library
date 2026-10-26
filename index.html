@@ -1593,6 +1593,72 @@ body.home-active nav {
 }
 .streak-day.read .streak-day-status { color: #9eeadd; }
 .streak-day.recovery .streak-day-status { color: #f5d98b; }
+.collection-summary {
+  color: #f5d98b;
+  font-size: 0.85rem;
+  margin: 0.4rem 0 0.8rem;
+}
+.collection-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.collectible-item {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(245, 209, 123, 0.14);
+  border-radius: 8px;
+  padding: 0.8rem 0.6rem;
+  text-align: center;
+}
+.collectible-medal,
+.celebration-icon {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.07), transparent 70%);
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  display: grid;
+  height: 78px;
+  margin: 0 auto 0.45rem;
+  place-items: center;
+  width: 78px;
+}
+.collectible-medal svg,
+.celebration-icon svg {
+  fill: none;
+  height: 76%;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  width: 76%;
+}
+.collectible-medal svg .thin,
+.celebration-icon svg .thin { stroke-width: 1; }
+.collectible-medal svg .fill,
+.celebration-icon svg .fill { fill: currentColor; }
+.collectible-medal svg .soft,
+.celebration-icon svg .soft { fill: currentColor; fill-opacity: 0.25; }
+.collectible-medal svg .glow,
+.celebration-icon svg .glow { stroke-dasharray: 2 3; stroke-opacity: 0.4; }
+.collectible-tier-0 { color: #5c5040; }
+.collectible-tier-0 .collectible-medal { opacity: 0.7; }
+.collectible-tier-1 { color: #cf8f58; }
+.collectible-tier-2 { color: #dfe6ee; }
+.collectible-tier-3 { color: #f5d27b; }
+.collectible-tier-3 .collectible-medal,
+.celebration-icon.collectible-tier-3 {
+  box-shadow: 0 0 0 3px rgba(245, 210, 123, 0.18), 0 0 18px rgba(245, 210, 123, 0.35);
+  filter: drop-shadow(0 0 5px rgba(245, 210, 123, 0.5));
+}
+.collectible-name { color: var(--text); font-size: 0.85rem; font-weight: bold; }
+.collectible-tier-label { font-size: 0.72rem; margin: 0.15rem 0 0.25rem; }
+.collectible-desc { color: var(--text2); font-size: 0.68rem; line-height: 1.5; }
+.collectible-progress { color: var(--text2); font-size: 0.65rem; margin-top: 0.15rem; }
+.celebration-icon { display: none; height: 96px; margin-bottom: 0.7rem; width: 96px; }
+.celebration-icon.show { display: grid; }
+@media (max-width: 720px) {
+  .collection-grid { gap: 0.4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .collectible-medal { height: 64px; width: 64px; }
+}
 .exchange-balance {
   color: #f5d98b;
   font-size: 0.85rem;
@@ -2607,6 +2673,13 @@ nav button {
     </div>
   </div>
 
+  <div class="card collection-card">
+    <h2>収蔵室</h2>
+    <p class="text-sm">積み重ねに応じて、図書館に品物が収められます。銅・銀・金の3段階で育ちます。</p>
+    <div class="collection-summary" id="collection-summary"></div>
+    <div class="collection-grid" id="collection-grid"></div>
+  </div>
+
   <div class="card exchange-card">
     <h2>リカバリー権の交換所</h2>
     <div class="exchange-balance" id="exchange-balance"></div>
@@ -2656,6 +2729,7 @@ nav button {
 
 <div class="celebration-overlay" id="celebration-overlay" onclick="dismissCelebration()">
   <div class="celebration-card">
+    <div class="celebration-icon" id="celebration-icon" aria-hidden="true"></div>
     <div class="celebration-kicker" id="celebration-kicker">実績獲得</div>
     <h2 class="celebration-title" id="celebration-title">新しい実績</h2>
     <div class="celebration-body" id="celebration-body"></div>
@@ -3021,6 +3095,119 @@ function weeklyModeVariety(d) {
   return new Set(sessionsSinceDays(d, 7).map(s => s.type || 'reading')).size;
 }
 
+// ==================== 収蔵品 ====================
+// アイコンは viewBox 0 0 64 64 の線画。.thin=細線 / .fill=塗り / .soft=半透明の塗り / .glow=点線の光
+const COLLECTIBLE_ICONS = {
+  "astrolabe": "<circle cx=\"32\" cy=\"9.5\" r=\"3.6\"/><path d=\"M29.2 13.6h5.6l1.6 3.2h-8.8z\"/> <circle cx=\"32\" cy=\"37\" r=\"23\"/><circle cx=\"32\" cy=\"37\" r=\"18.2\"/> <path class=\"thin\" d=\"M53.5 37L51.2 37 M53.2 40.7L52 40.5 M52.2 44.4L51.1 43.9 M50.6 47.8L48.6 46.6 M48.5 50.8L47.6 50 M45.8 53.5L45 52.6 M42.8 55.6L41.6 53.6 M39.4 57.2L38.9 56.1 M35.7 58.2L35.5 57 M32 58.5L32 56.2 M28.3 58.2L28.5 57 M24.6 57.2L25.1 56.1 M21.3 55.6L22.4 53.6 M18.2 53.5L19 52.6 M15.5 50.8L16.4 50 M13.4 47.8L15.4 46.6 M11.8 44.4L12.9 43.9 M10.8 40.7L12 40.5 M10.5 37L12.8 37 M10.8 33.3L12 33.5 M11.8 29.6L12.9 30.1 M13.4 26.2L15.4 27.4 M15.5 23.2L16.4 24 M18.2 20.5L19 21.4 M21.2 18.4L22.4 20.4 M24.6 16.8L25.1 17.9 M28.3 15.8L28.5 17 M32 15.5L32 17.8 M35.7 15.8L35.5 17 M39.4 16.8L38.9 17.9 M42.8 18.4L41.6 20.4 M45.8 20.5L45 21.4 M48.5 23.2L47.6 24 M50.6 26.2L48.6 27.4 M52.2 29.6L51.1 30.1 M53.2 33.3L52 33.5\"/> <circle class=\"thin\" cx=\"32\" cy=\"34\" r=\"10.5\"/> <path class=\"thin\" d=\"M32 18.8v36.4M13.8 37h36.4\"/> <path d=\"M20 47.5 44 26.5\"/><path d=\"M41.6 25.2l4 2.6-1.8 1.7zM22.4 48.8l-4-2.6 1.8-1.7z\" class=\"fill\"/> <circle cx=\"32\" cy=\"37\" r=\"1.8\" class=\"fill\"/> <path class=\"thin\" d=\"M24.5 30.5l1.8-.6M38.6 41.6l1.6 1M27.5 42.8l-.4 1.8\"/>",
+  "scroll": "<path d=\"M18 13.5h28v35H18z\"/> <rect x=\"14\" y=\"9\" width=\"36\" height=\"5.5\" rx=\"2.75\"/> <rect x=\"14\" y=\"47.5\" width=\"36\" height=\"5.5\" rx=\"2.75\"/> <path d=\"M12 11.75h2M50 11.75h2M12 50.25h2M50 50.25h2\"/> <path class=\"thin\" d=\"M22 20h20 M22 24.5h17 M22 29h20 M22 33.5h14 M22 38h19 M22 42.5h12\"/> <circle cx=\"40\" cy=\"44\" r=\"3.4\" class=\"soft\"/><path d=\"M38.2 47l-1.4 6.5 2.2-1.5M41.8 47l1.4 6.5-2.2-1.5\"/>",
+  "lamp": "<g transform=\"translate(32 32) scale(1.12) translate(-34.5 -33)\"><path d=\"M14.5 39.5c0-6 7.5-10 17.5-10s15.5 3 19 6.5l7-3.2c.9-.4 1.6.6 1 1.3L54 41c-2.5 3.5-11 6-22 6-10 0-17.5-2.5-17.5-7.5z\"/> <path d=\"M14.8 38.2c-4.3-1.2-6.6 1.8-5.4 4.6 1.1 2.6 4.2 2.6 6.4 1.2\"/> <ellipse cx=\"31\" cy=\"33.2\" rx=\"5.2\" ry=\"1.6\"/> <path d=\"M24 47v3.5h16V47M21 50.5h22\"/> <path class=\"fill soft\" d=\"M56.6 33.6c-2.6-3-2.9-6.4-.6-10.4.6 2.4 2.6 3.6 3.1 6.1.5 2.5-.6 3.8-2.5 4.3z\"/> <path class=\"thin\" d=\"M57 19.5v-3M61.5 22l2-2M52.5 22l-2-2\"/> <path class=\"thin\" d=\"M20 41.5c5 2 19 2.4 26 0\"/></g>",
+  "manuscript": "<path d=\"M32 17c-6-4-14-4.8-22-3.2v33.4c8-1.6 16-.8 22 3.2 6-4 14-4.8 22-3.2V13.8c-8-1.6-16-.8-22 3.2z\"/> <path d=\"M32 17v33.4\"/> <path d=\"M10 47.2 7 49v-31l3-1.6M54 47.2l3 1.8v-31l-3-1.6\"/> <path class=\"thin\" d=\"M13 22c1.5-1 3 1 4.5 0s3 1 4.5 0 3 1 4 0 M13 27c1.5-1 3 1 4.5 0s3 1 4.5 0 3 1 4 0 M13 32c1.5-1 3 1 4.5 0s3 1 4.5 0 3 1 4 0 M13 37c1.5-1 3 1 4.5 0s3 1 4.5 0 3 1 4 0 M36 22c1.5-1 3 1 4.5 0s3 1 4.5 0 3 1 4 0 M36 27c1.5-1 3 1 4.5 0s3 1 4.5 0 3 1 4 0 M36 32c1.5-1 3 1 4.5 0s3 1 4.5 0 3 1 4 0 M36 37c1.5-1 3 1 4.5 0s3 1 4.5 0 3 1 4 0\"/> <path class=\"thin\" d=\"M17 42.5h9M39 42.5h9\"/> <path class=\"fill soft\" d=\"M42 13.6v9.4l2.2-1.8 2.2 1.8v-9.9\"/>",
+  "abacus": "<rect x=\"10\" y=\"11\" width=\"44\" height=\"40\" rx=\"2\"/> <path class=\"thin\" d=\"M13 19h38M13 27h38M13 35h38M13 43h38\"/> <rect x=\"15.1\" y=\"16.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"19.6\" y=\"16.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"38.6\" y=\"16.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"43.1\" y=\"16.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"15.1\" y=\"24.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"19.6\" y=\"24.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"24.1\" y=\"24.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"43.1\" y=\"24.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"15.1\" y=\"32.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"34.1\" y=\"32.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"38.6\" y=\"32.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"43.1\" y=\"32.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"15.1\" y=\"40.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"19.6\" y=\"40.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"24.1\" y=\"40.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/><rect x=\"28.6\" y=\"40.4\" width=\"3.8\" height=\"5.2\" rx=\"1.9\" class=\"soft\"/> <path d=\"M14 51v4.5M50 51v4.5\"/>",
+  "lock": "<path d=\"M17 28v-7a10 10 0 0 1 20 0v7\"/> <path class=\"thin\" d=\"M21 28v-7a6 6 0 0 1 12 0v7\"/> <rect x=\"11\" y=\"28\" width=\"32\" height=\"24\" rx=\"3\"/> <circle cx=\"27\" cy=\"37.5\" r=\"3\" class=\"fill\"/><path d=\"M27 39.5v6\" stroke-width=\"2.6\"/> <path class=\"thin\" d=\"M14 31.5h26M14 48.5h26\"/> <circle cx=\"50\" cy=\"16\" r=\"5\"/><circle cx=\"50\" cy=\"16\" r=\"1.8\" class=\"thin\"/> <path d=\"M50 21v25M50 41.5h4.5M50 37h3.5M50 45.5h3\"/>",
+  "quill": "<path d=\"M24 44.5C30 32 40 18 54 8c-1.2 10-6 22-17 30.5-4 3-8.5 5-13 6z\"/> <path d=\"M24 44.5 54 8\"/> <path class=\"thin\" d=\"M28 40l-2.6 -1.5 M31.2 35.6l-2.5 -1.6 M34.4 31.2l-2.4 -1.8 M37.6 26.8l-2.3 -1.9 M40.8 22.4l-2.2 -2.1 M44 18l-2.1 -2.2 M47.2 13.6l-2 -2.4 M31.2 35.6l2.4 0.6 M34.4 31.2l2.4 0.6 M37.6 26.8l2.4 0.6 M40.8 22.4l2.4 0.6 M44 18l2.4 0.6 M47.2 13.6l2.4 0.6\"/> <path d=\"M9 53.5h28\"/> <path d=\"M12 53.5c-1.5-5 .5-9 4-10.5v-3.5h10v3.5c3.5 1.5 5.5 5.5 4 10.5\"/> <path d=\"M14.8 39.5h12.4\"/> <path class=\"soft fill\" d=\"M15 50c3 1 9 1 12 0\"/>",
+  "book": "<path d=\"M14 12h30a3 3 0 0 1 3 3v36a3 3 0 0 1-3 3H14z\"/> <path d=\"M14 12c-2.4 0-4 1.4-4 3.5v35c0 2.1 1.6 3.5 4 3.5\"/> <path class=\"thin\" d=\"M47 17h3.5v32H47M47 21.5h3.5M47 26h3.5M47 30.5h3.5M47 35h3.5M47 39.5h3.5M47 44h3.5\"/> <path d=\"M20 12v9l-3-3M38 12v9l3-3M20 54v-9l-3 3M38 54v-9l3 3\"/> <path d=\"M29 23l8 10-8 10-8-10z\"/> <circle cx=\"29\" cy=\"33\" r=\"3\" class=\"fill soft\"/> <path class=\"thin\" d=\"M29 18v2.5M29 45.5V48M17.5 33h2M38.5 33h2\"/> <path d=\"M44 26h8v6h-8\"/>",
+  "candle": "<circle cx=\"32\" cy=\"12\" r=\"9\" class=\"thin glow\"/> <path class=\"fill soft\" d=\"M32 6c-3 3.5-4.2 6.5-2.6 9.4.9 1.6 4.3 1.6 5.2 0 1.6-2.9.4-5.9-2.6-9.4z\"/> <path d=\"M32 17.5v3\"/> <rect x=\"28\" y=\"20.5\" width=\"8\" height=\"15\" rx=\"1\"/> <path class=\"thin\" d=\"M30.5 20.5v4.5\"/> <path d=\"M21 35.5h22c-1 2.5-4 3.5-11 3.5s-10-1-11-3.5z\"/> <path d=\"M32 39v3M29 42h6l-1 3h-4zM31 45v4\"/> <circle cx=\"32\" cy=\"47\" r=\"1.6\"/> <path d=\"M30.5 49h3l3 4h-9zM20 56c0-2.5 5-3.2 12-3.2s12 .7 12 3.2z\"/>",
+  "hourglass": "<rect x=\"14\" y=\"8\" width=\"36\" height=\"4.5\" rx=\"1.5\"/> <rect x=\"14\" y=\"51.5\" width=\"36\" height=\"4.5\" rx=\"1.5\"/> <path d=\"M17 12.5v39M47 12.5v39\"/> <path d=\"M22 12.5c0 9 9 13 9 19.5s-9 10.5-9 19.5h20c0-9-9-13-9-19.5s9-10.5 9-19.5\"/> <path class=\"fill soft\" d=\"M25.5 18.5h13c-1.4 3.4-5.3 6-6.5 9.5-1.2-3.5-5.1-6.1-6.5-9.5zM23.8 51.5c.6-4 4.6-7 8.2-7.6 3.6.6 7.6 3.6 8.2 7.6z\"/> <path class=\"thin\" d=\"M32 30v13\"/>",
+  "scales": "<circle cx=\"32\" cy=\"9\" r=\"2.5\"/> <path d=\"M32 11.5v41M24 56h16M27 52.5h10\"/> <path d=\"M10 17.5h44\"/> <path d=\"M28.5 17.5 32 14l3.5 3.5\"/> <path class=\"thin\" d=\"M13 17.5 6.5 36M13 17.5 19.5 36M51 17.5 44.5 36M51 17.5 57.5 36\"/> <path d=\"M5 36h16c0 4.5-3.6 7-8 7s-8-2.5-8-7zM43 36h16c0 4.5-3.6 7-8 7s-8-2.5-8-7z\"/> <circle cx=\"13\" cy=\"17.5\" r=\"1.4\" class=\"fill\"/><circle cx=\"51\" cy=\"17.5\" r=\"1.4\" class=\"fill\"/>",
+  "purse": "<path d=\"M24 20c-9 6-14 14-13 23 1 7 6 11 16 11s15-4 16-11c1-9-4-17-13-23\"/> <path d=\"M22.5 20h11M24 20c-2-3-4.5-5-3-8 2 1 3.5 1.5 4.5 0 1 1.5 2.5 1.5 3.5 0 1 1.5 2.5 1 4.5 0 1.5 3-1 5-3 8\"/> <path class=\"thin\" d=\"M21 23.5c4.5 1.5 10 1.5 14.5 0M34 21.5c3 1.5 4.5 4 4 7\"/> <circle cx=\"27.5\" cy=\"40\" r=\"5.5\"/><path class=\"thin\" d=\"M27.5 36.5l1 2.4 2.5.2-1.9 1.6.6 2.5-2.2-1.4-2.2 1.4.6-2.5-1.9-1.6 2.5-.2z\"/> <ellipse cx=\"50\" cy=\"52\" rx=\"7\" ry=\"2.5\"/><path d=\"M43 52v-2.5c0-1.4 3.1-2.5 7-2.5s7 1.1 7 2.5V52\"/> <ellipse class=\"thin\" cx=\"50\" cy=\"44.5\" rx=\"7\" ry=\"2.5\"/><path class=\"thin\" d=\"M43 44.5V47M57 44.5V47\"/> <circle cx=\"53\" cy=\"33\" r=\"4.2\"/><circle class=\"thin\" cx=\"53\" cy=\"33\" r=\"2.2\"/>"
+};
+
+function readingGenreMinutes(d, genre) {
+  return d.sessions
+    .filter(s => (s.type || 'reading') === 'reading' && s.genre === genre)
+    .reduce((sum, s) => sum + (Number(s.minutes) || 0), 0);
+}
+function learningKeywordMinutes(d, keywords) {
+  return learningSessions(d)
+    .filter(s => keywords.some(keyword => String(s.learningGenre || s.genre || '').includes(keyword)))
+    .reduce((sum, s) => sum + (Number(s.minutes) || 0), 0);
+}
+
+const COLLECTIBLE_TIER_NAMES = ['未収蔵', '銅', '銀', '金'];
+const COLLECTIBLES = [
+  { id: 'astrolabe', name: '真鍮のアストロラーベ', desc: '科学史の読書時間', unit: '分', tiers: [1000, 3000, 6000], valueFn: d => readingGenreMinutes(d, '科学史') },
+  { id: 'scroll', name: '年代記の巻物', desc: '歴史の読書時間', unit: '分', tiers: [500, 1500, 3000], valueFn: d => readingGenreMinutes(d, '歴史') },
+  { id: 'lamp', name: '哲学者のランプ', desc: '哲学の読書時間', unit: '分', tiers: [500, 1500, 3000], valueFn: d => readingGenreMinutes(d, '哲学') },
+  { id: 'manuscript', name: 'シリア語の写本', desc: '古典シリア語の学習時間', unit: '分', tiers: [1000, 3000, 6000], valueFn: d => learningKeywordMinutes(d, ['シリア語']) },
+  { id: 'abacus', name: '計算盤（アバクス）', desc: 'データサイエンス・AIの学習時間', unit: '分', tiers: [2000, 5000, 10000], valueFn: d => learningKeywordMinutes(d, ['データサイエンス', 'AI']) },
+  { id: 'lock', name: '錠前と鍵', desc: 'ITパスポート・セキュリティ・ネットワークの学習時間', unit: '分', tiers: [1000, 3000, 6000], valueFn: d => learningKeywordMinutes(d, ['ITパスポート', 'セキュリティ', 'ネットワーク']) },
+  { id: 'quill', name: '羽ペンとインク壺', desc: '創作時間', unit: '分', tiers: [3000, 7500, 15000], valueFn: d => creativeMinutes(d) },
+  { id: 'book', name: '製本された書物', desc: '読了した冊数', unit: '冊', tiers: [15, 30, 50], valueFn: d => doneBooks(d) },
+  { id: 'candle', name: '守り火の燭台', desc: '連続記録の日数', unit: '日', tiers: [180, 270, 365], valueFn: d => d.streak || 0 },
+  { id: 'hourglass', name: '砂時計', desc: '1日の目標を達成した日数', unit: '日', tiers: [30, 60, 120], valueFn: d => dailyGoalDays(d) },
+  { id: 'scales', name: '均衡の天秤', desc: '読書・学習・創作をすべて記録した日数', unit: '日', tiers: [20, 50, 100], valueFn: d => tripleModeDays(d) },
+  { id: 'purse', name: '両替商の金貨袋', desc: '交換所でリカバリー権を使った合計数', unit: '個', tiers: [10, 25, 50], valueFn: d => xpExchangeCount(d) + xpBoostCount(d) },
+];
+let pendingCollectibleUpgrades = [];
+
+function collectibleSvg(id) {
+  return `<svg viewBox="0 0 64 64" aria-hidden="true">${COLLECTIBLE_ICONS[id] || ''}</svg>`;
+}
+function computeCollectibleTier(item, d) {
+  const value = item.valueFn(d);
+  return item.tiers.filter(threshold => value >= threshold).length;
+}
+// 一度収めた段階は、連続記録が途切れるなどで値が下がっても保持する
+function getCollectibleTier(id) {
+  return (data.collectibleTiers && data.collectibleTiers[id]) || 0;
+}
+function checkCollectibles() {
+  if (!data.collectibleTiers || typeof data.collectibleTiers !== 'object') data.collectibleTiers = {};
+  COLLECTIBLES.forEach(item => {
+    const tier = computeCollectibleTier(item, data);
+    if (tier > getCollectibleTier(item.id)) {
+      data.collectibleTiers[item.id] = tier;
+      pendingCollectibleUpgrades = pendingCollectibleUpgrades.filter(up => up.id !== item.id);
+      pendingCollectibleUpgrades.push({ id: item.id, tier });
+    }
+  });
+}
+function collectibleTierTotal() {
+  return COLLECTIBLES.reduce((sum, item) => sum + getCollectibleTier(item.id), 0);
+}
+function celebrateCollectibles() {
+  const upgrades = pendingCollectibleUpgrades;
+  pendingCollectibleUpgrades = [];
+  upgrades.forEach(({ id, tier }) => {
+    const item = COLLECTIBLES.find(c => c.id === id);
+    if (!item) return;
+    queueCelebration({
+      kicker: tier === 1 ? '収蔵品を入手' : '収蔵品が昇格',
+      title: `${item.name}【${COLLECTIBLE_TIER_NAMES[tier]}】`,
+      body: `${item.desc}が ${item.tiers[tier - 1].toLocaleString()}${item.unit} に達しました。`,
+      icon: id,
+      tier,
+      duration: 3200,
+    });
+  });
+}
+function renderCollection() {
+  const grid = document.getElementById('collection-grid');
+  if (!grid) return;
+  const owned = COLLECTIBLES.filter(item => getCollectibleTier(item.id) > 0).length;
+  document.getElementById('collection-summary').textContent =
+    `収蔵 ${owned} / ${COLLECTIBLES.length}点 ・ 段階 ${collectibleTierTotal()} / ${COLLECTIBLES.length * 3}`;
+  grid.innerHTML = COLLECTIBLES.map(item => {
+    const tier = getCollectibleTier(item.id);
+    const value = item.valueFn(data);
+    const next = item.tiers[tier];
+    const pct = next ? Math.min(100, Math.round(value / next * 100)) : 100;
+    const progress = next
+      ? `${value.toLocaleString()} / ${next.toLocaleString()}${item.unit}（次は${COLLECTIBLE_TIER_NAMES[tier + 1]}）`
+      : '最高段階に到達';
+    return `
+      <div class="collectible-item collectible-tier-${tier}">
+        <div class="collectible-medal">${collectibleSvg(item.id)}</div>
+        <div class="collectible-name">${item.name}</div>
+        <div class="collectible-tier-label">${COLLECTIBLE_TIER_NAMES[tier]}</div>
+        <div class="collectible-desc">${item.desc}<br>銅 ${item.tiers[0].toLocaleString()} ／ 銀 ${item.tiers[1].toLocaleString()} ／ 金 ${item.tiers[2].toLocaleString()}${item.unit}</div>
+        <div class="xp-bar-wrap" style="height:4px; margin-top:0.4rem;"><div class="xp-bar" style="width:${pct}%"></div></div>
+        <div class="collectible-progress">${progress}</div>
+      </div>
+    `;
+  }).join('');
+}
+
 const BADGES = [
   { id: 'first_session', name: '初入館', desc: '初めてのセッション完了', progressFn: d => ({ current: d.sessions.length, max: 1 }) },
   { id: 'session_5', name: '閲覧席の常連', desc: 'セッション5回達成', progressFn: d => ({ current: d.sessions.length, max: 5 }) },
@@ -3235,6 +3422,7 @@ function badgeProgress(badge, d) {
 }
 
 function checkBadges() {
+  checkCollectibles();
   const newBadges = [];
   BADGES.forEach(badge => {
     const { current, max } = badgeProgress(badge, data);
@@ -3267,6 +3455,11 @@ function showNextCelebration() {
     return;
   }
   celebrationShowing = true;
+  const iconEl = document.getElementById('celebration-icon');
+  if (iconEl) {
+    iconEl.className = item.icon ? `celebration-icon show collectible-tier-${item.tier || 1}` : 'celebration-icon';
+    iconEl.innerHTML = item.icon ? collectibleSvg(item.icon) : '';
+  }
   document.getElementById('celebration-kicker').textContent = item.kicker;
   document.getElementById('celebration-title').textContent = item.title;
   document.getElementById('celebration-body').textContent = item.body;
@@ -3306,6 +3499,7 @@ function playProgressCelebration(newBadgeIds = [], previousXp = null) {
       body,
     });
   }
+  celebrateCollectibles();
 }
 
 // ==================== ナビゲーション ====================
@@ -5668,6 +5862,7 @@ function renderLevelDetails() {
     { value: formatProgressMinutes(learningMinutes(data)), label: '学習時間' },
     { value: formatProgressMinutes(creativeMinutes(data)), label: '創作時間' },
     { value: `${earnedCount} / ${BADGES.length}`, label: '獲得実績' },
+    { value: `${collectibleTierTotal()} / ${COLLECTIBLES.length * 3}`, label: '収蔵品の段階' },
   ];
   summary.innerHTML = items.map(item => `
     <div class="level-summary-item">
@@ -5699,10 +5894,11 @@ function setAchievementView(view) {
 function updateAchievements() {
   renderExchange();
   const unlockedNow = checkBadges();
-  if (unlockedNow.length > 0) {
+  if (unlockedNow.length > 0 || pendingCollectibleUpgrades.length > 0) {
     DB.save(data);
     playProgressCelebration(unlockedNow);
   }
+  renderCollection();
 
   const lvl = getLevel(data.xp);
   const levelRank = getLevelIndex(data.xp);
@@ -5782,7 +5978,7 @@ function updateAchievements() {
 
 // ==================== 初期化 ====================
 // 実績カタログ追加時は、過去の記録で到達済みの実績も即時反映する。
-if (checkBadges().length > 0) DB.save(data);
+if (checkBadges().length > 0 || pendingCollectibleUpgrades.length > 0) DB.save(data);
 setHistoricalBackground(historicalBackgroundId, false);
 setHomePreviewZoom(homePreviewZoom);
 updateLayoutOffsets();
