@@ -3001,6 +3001,22 @@ function tripleModeDays(d) {
   });
   return Object.values(modes).filter(set => ['reading', 'learning', 'creative'].every(type => set.has(type))).length;
 }
+function xpExchangeCount(d) {
+  return d.recoveryExchangedForXp || 0;
+}
+function xpBoostCount(d) {
+  return d.xpBoostCount || 0;
+}
+function boostedDaysOverMinutes(d, threshold) {
+  const boostDates = new Set(Array.isArray(d.xpBoostDates) ? d.xpBoostDates : []);
+  if (boostDates.size === 0) return 0;
+  const buckets = {};
+  d.sessions.forEach(s => {
+    const key = getLocalDateKey(s.date);
+    if (boostDates.has(key)) buckets[key] = (buckets[key] || 0) + (Number(s.minutes) || 0);
+  });
+  return Object.values(buckets).filter(minutes => minutes >= threshold).length;
+}
 function weeklyModeVariety(d) {
   return new Set(sessionsSinceDays(d, 7).map(s => s.type || 'reading')).size;
 }
@@ -3195,6 +3211,17 @@ const BADGES = [
   { id: 'level_heir', name: '翻訳運動を継ぐ', desc: 'レベル「翻訳運動の継承者」に到達', progressFn: d => ({ current: d.xp, max: 60000 }) },
   { id: 'level_house_of_wisdom', name: '知恵の館の鍵', desc: 'レベル「知恵の館の司書長」に到達', progressFn: d => ({ current: d.xp, max: 70000 }) },
   { id: 'level_thousand_nights', name: '千夜の学匠就任', desc: 'レベル「千夜の学匠」に到達', progressFn: d => ({ current: d.xp, max: 95000 }) },
+  { id: 'exchange_first', name: '交換所の扉', desc: '交換所を初めて利用', progressFn: d => ({ current: xpExchangeCount(d) + xpBoostCount(d), max: 1 }) },
+  { id: 'exchange_xp_5', name: '灯を知に換える', desc: 'リカバリー権を合計5個XPに交換', progressFn: d => ({ current: xpExchangeCount(d), max: 5 }) },
+  { id: 'exchange_xp_15', name: '知の両替商', desc: 'リカバリー権を合計15個XPに交換', progressFn: d => ({ current: xpExchangeCount(d), max: 15 }) },
+  { id: 'exchange_xp_30', name: '両替商組合の長', desc: 'リカバリー権を合計30個XPに交換', progressFn: d => ({ current: xpExchangeCount(d), max: 30 }) },
+  { id: 'boost_1', name: '追い風の一日', desc: 'XPブーストを初めて使う', progressFn: d => ({ current: xpBoostCount(d), max: 1 }) },
+  { id: 'boost_5', name: '五度の追い風', desc: 'XPブーストを5回使う', progressFn: d => ({ current: xpBoostCount(d), max: 5 }) },
+  { id: 'boost_15', name: '追い風の常連', desc: 'XPブーストを15回使う', progressFn: d => ({ current: xpBoostCount(d), max: 15 }) },
+  { id: 'boost_day_180', name: '追い風を帆に受けて', desc: 'ブースト中の日に180分以上記録', progressFn: d => ({ current: boostedDaysOverMinutes(d, 180), max: 1 }) },
+  { id: 'boost_day_300', name: '追い風の書斎', desc: 'ブースト中の日に300分以上記録', progressFn: d => ({ current: boostedDaysOverMinutes(d, 300), max: 1 }) },
+  { id: 'boost_day_300_5', name: '風を読む航海者', desc: 'ブースト中に300分以上記録した日を5日', progressFn: d => ({ current: boostedDaysOverMinutes(d, 300), max: 5 }) },
+  { id: 'boost_day_600', name: '嵐の中の大航海', desc: 'ブースト中の日に600分以上記録', progressFn: d => ({ current: boostedDaysOverMinutes(d, 600), max: 1 }) },
   { id: 'level_bridge', name: '文明を渡す者', desc: 'レベル「文明を渡す架け橋」に到達', progressFn: d => ({ current: d.xp, max: 110000 }) },
 ];
 
@@ -4786,6 +4813,8 @@ function exchangeRecoveryForBoost() {
   data.recoveryTokens = tokens - 1;
   data.xpBoostDate = getLocalDateKey(Date.now());
   data.xpBoostCount = (data.xpBoostCount || 0) + 1;
+  if (!Array.isArray(data.xpBoostDates)) data.xpBoostDates = [];
+  data.xpBoostDates.push(data.xpBoostDate);
   DB.save(data);
   updateAchievements();
   updateHome();
