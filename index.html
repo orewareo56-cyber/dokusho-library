@@ -1663,6 +1663,11 @@ body.home-active nav {
   .collection-grid { gap: 0.4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .collectible-medal { height: 64px; width: 64px; }
 }
+.memo-counter {
+  margin: 0.25rem 0 0.5rem;
+  text-align: right;
+}
+.memo-counter-low { color: #f5a97b; }
 .exchange-balance {
   color: #f5d98b;
   font-size: 0.85rem;
@@ -2584,8 +2589,9 @@ nav button {
     </div>
     <div class="card animate-in">
       <h2>今日の一言メモ（任意）</h2>
-      <textarea id="result-memo" maxlength="100" rows="2"
+      <textarea id="result-memo" maxlength="300" rows="4" oninput="updateMemoCounter()"
         placeholder="今日の読書で一番残ったこと（書かなくてもOK）" style="resize:none;"></textarea>
+      <div class="text-sm memo-counter" id="memo-counter" aria-live="polite">残り 300文字</div>
       <button class="btn btn-outline btn-sm" onclick="saveMemo()">記録する</button>
       <span id="memo-saved" class="text-sm" style="display:none; margin-left:0.5rem; color:var(--success);">✓ 保存しました</span>
     </div>
@@ -5359,6 +5365,16 @@ function endSession() {
   playProgressCelebration(newBadges, previousXp);
 }
 
+function updateMemoCounter() {
+  const memoEl = document.getElementById('result-memo');
+  const counter = document.getElementById('memo-counter');
+  if (!memoEl || !counter) return;
+  const max = Number(memoEl.maxLength) || 300;
+  const remaining = Math.max(0, max - memoEl.value.length);
+  counter.textContent = `残り ${remaining}文字`;
+  counter.classList.toggle('memo-counter-low', remaining <= 20);
+}
+
 function saveMemo() {
   const memo = document.getElementById('result-memo').value.trim();
   if (!memo) return;
@@ -5373,6 +5389,7 @@ function saveMemo() {
 function resetSession() {
   document.getElementById('session-result').style.display = 'none';
   document.getElementById('result-memo').value = '';
+  updateMemoCounter();
   document.getElementById('result-badges').style.display = 'none';
   sessionStart = null;
   timerInterval = null;
