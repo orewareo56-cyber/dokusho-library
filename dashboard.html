@@ -186,6 +186,55 @@ td.time { color: var(--accent); font-weight: 600; text-align: right; white-space
 .type-reading { color: var(--reading); }
 .type-learning { color: var(--learning); }
 .type-creative { color: var(--creative); }
+.note-line { display: block; }
+.note-label { color: var(--muted); font-size: 0.6rem; margin-right: 0.25rem; }
+.note-edit-button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.62rem;
+  margin-top: 0.3rem;
+  padding: 0.2rem 0.55rem;
+}
+.note-dialog {
+  background: #15100a;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  margin: auto;
+  max-width: 460px;
+  padding: 1.1rem;
+  width: calc(100% - 2rem);
+}
+.note-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+.note-dialog h3 { color: var(--accent); font-size: 0.95rem; margin-bottom: 0.2rem; }
+.note-dialog-meta { color: var(--muted); font-size: 0.72rem; margin-bottom: 0.8rem; }
+.note-dialog label { display: block; font-size: 0.75rem; margin: 0.6rem 0 0.25rem; }
+.note-dialog textarea {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.55rem;
+  resize: vertical;
+  width: 100%;
+}
+.note-dialog-count { color: var(--muted); font-size: 0.65rem; text-align: right; }
+.note-dialog-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
+.note-dialog-actions button {
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 0.45rem 1rem;
+}
+.note-cancel { background: none; border: 1px solid var(--border); color: var(--text); }
+.note-save { background: var(--accent); border: none; color: #1a1208; }
 .status { color: var(--muted); font-size: 0.7rem; margin-top: 0.45rem; min-height: 1em; text-align: right; }
 @media (max-width: 720px) {
   .app-header-inner { min-height: 54px; }
@@ -274,6 +323,23 @@ td.time { color: var(--accent); font-weight: 600; text-align: right; white-space
       <div class="breakdown-list" id="learning-breakdown"></div>
     </section>
   </div>
+
+  <dialog class="note-dialog" id="note-dialog" aria-labelledby="note-dialog-title">
+    <form method="dialog" onsubmit="saveNoteEdit(event)">
+      <h3 id="note-dialog-title">メモを編集</h3>
+      <div class="note-dialog-meta" id="note-dialog-meta"></div>
+      <label for="note-dialog-plan" id="note-dialog-plan-label"></label>
+      <textarea id="note-dialog-plan" rows="3"></textarea>
+      <div class="note-dialog-count" id="note-dialog-plan-count"></div>
+      <label for="note-dialog-memo">一言メモ</label>
+      <textarea id="note-dialog-memo" rows="5" maxlength="300"></textarea>
+      <div class="note-dialog-count" id="note-dialog-memo-count"></div>
+      <div class="note-dialog-actions">
+        <button type="button" class="note-cancel" onclick="closeNoteEditor()">キャンセル</button>
+        <button type="submit" class="note-save">保存する</button>
+      </div>
+    </form>
+  </dialog>
 
   <section class="panel">
     <div class="panel-head">
@@ -364,10 +430,76 @@ function getContentLabel(session) {
   return getBook(session)?.title || session.genre || '読書';
 }
 
-function getNote(session) {
-  if (session._type === 'learning') return session.learningNote || '';
-  if (session._type === 'creative') return session.creativeNote || '';
-  return session.memo || session.preNote || '';
+// 種別ごとの「始める前のメモ」欄（本体アプリの入力欄と同じ上限）
+const PLAN_NOTE_FIELDS = {
+  reading: { key: 'preNote', label: '今日の問い', max: 100 },
+  learning: { key: 'learningNote', label: '今日学ぶこと', max: 140 },
+  creative: { key: 'creativeNote', label: '今日つくるもの', max: 140 },
+};
+
+function renderNoteCell(session) {
+  const plan = PLAN_NOTE_FIELDS[session._type];
+  const lines = [];
+  if (session[plan.key]) lines.push(`<span class="note-line"><span class="note-label">${plan.label}</span>${escapeHtml(session[plan.key])}</span>`);
+  if (session.memo) lines.push(`<span class="note-line"><span class="note-label">一言メモ</span>${escapeHtml(session.memo)}</span>`);
+  return `${lines.join('') || '—'}<br><button type="button" class="note-edit-button" onclick="openNoteEditor(${session._index})">編集</button>`;
+}
+
+let editingSessionIndex = null;
+function updateNoteDialogCounts() {
+  [['note-dialog-plan', 'note-dialog-plan-count'], ['note-dialog-memo', 'note-dialog-memo-count']].forEach(([inputId, countId]) => {
+    const input = document.getElementById(inputId);
+    document.getElementById(countId).textContent = `残り ${Math.max(0, input.maxLength - input.value.length)}文字`;
+  });
+}
+function openNoteEditor(index) {
+  const session = sessions.find(item => item._index === index);
+  if (!session) return;
+  editingSessionIndex = index;
+  const plan = PLAN_NOTE_FIELDS[session._type];
+  document.getElementById('note-dialog-meta').textContent =
+    `${formatDate(session._date, true)} ${String(session._date.getHours()).padStart(2, '0')}:${String(session._date.getMinutes()).padStart(2, '0')} ／ ${TYPE_LABELS[session._type]} ／ ${getContentLabel(session)}`;
+  document.getElementById('note-dialog-plan-label').textContent = plan.label;
+  const planInput = document.getElementById('note-dialog-plan');
+  planInput.maxLength = plan.max;
+  planInput.value = session[plan.key] || '';
+  document.getElementById('note-dialog-memo').value = session.memo || '';
+  ['note-dialog-plan', 'note-dialog-memo'].forEach(id => { document.getElementById(id).oninput = updateNoteDialogCounts; });
+  updateNoteDialogCounts();
+  document.getElementById('note-dialog').showModal();
+}
+function closeNoteEditor() {
+  editingSessionIndex = null;
+  document.getElementById('note-dialog').close();
+}
+function saveNoteEdit(event) {
+  event.preventDefault();
+  const session = sessions.find(item => item._index === editingSessionIndex);
+  if (!session) return closeNoteEditor();
+  const plan = PLAN_NOTE_FIELDS[session._type];
+  const planValue = document.getElementById('note-dialog-plan').value.trim();
+  const memoValue = document.getElementById('note-dialog-memo').value.trim();
+  // 保存直前に最新のデータを読み直し、同じ記録であることを確かめてから書き換える
+  const latest = loadData();
+  const target = Array.isArray(latest.sessions) ? latest.sessions[session._index] : null;
+  if (!target || target.date !== session.date) {
+    alert('記録が更新されているため保存できませんでした。ページを再読み込みしてください。');
+    return closeNoteEditor();
+  }
+  target[plan.key] = planValue;
+  if (memoValue) target.memo = memoValue; else delete target.memo;
+  try {
+    localStorage.setItem('dokusho_data', JSON.stringify(latest));
+  } catch (error) {
+    alert('保存できませんでした。ブラウザの保存領域を確認してください。');
+    return;
+  }
+  session[plan.key] = planValue;
+  if (memoValue) session.memo = memoValue; else delete session.memo;
+  rawSessions[session._index] = target;
+  closeNoteEditor();
+  render();
+  document.getElementById('export-status').textContent = 'メモを保存しました';
 }
 
 function startOfWeek(date) {
@@ -619,7 +751,7 @@ function renderTable(filtered) {
           <td>${formatDate(session._date, true)}<br><span style="color:var(--muted);">${String(session._date.getHours()).padStart(2, '0')}:${String(session._date.getMinutes()).padStart(2, '0')}</span></td>
           <td><span class="type-pill type-${session._type}">${TYPE_LABELS[session._type]}</span></td>
           <td>${escapeHtml(getContentLabel(session))}</td>
-          <td>${escapeHtml(getNote(session)) || '—'}</td>
+          <td>${renderNoteCell(session)}</td>
           <td class="time">${formatMinutes(session._minutes)}</td>
         </tr>
       `).join('')}</tbody>

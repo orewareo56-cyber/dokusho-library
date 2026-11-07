@@ -1668,6 +1668,12 @@ body.home-active nav {
   text-align: right;
 }
 .memo-counter-low { color: #f5a97b; }
+.memo-save-emphasis {
+  box-shadow: 0 0 0 2px rgba(245, 209, 123, 0.35), 0 0 18px rgba(232, 160, 32, 0.35);
+  font-size: 1rem;
+  padding: 0.85rem 1rem;
+  width: 100%;
+}
 .exchange-balance {
   color: #f5d98b;
   font-size: 0.85rem;
@@ -2592,11 +2598,11 @@ nav button {
       <textarea id="result-memo" maxlength="300" rows="4" oninput="updateMemoCounter()"
         placeholder="今日の読書で一番残ったこと（書かなくてもOK）" style="resize:none;"></textarea>
       <div class="text-sm memo-counter" id="memo-counter" aria-live="polite">残り 300文字</div>
-      <button class="btn btn-outline btn-sm" onclick="saveMemo()">記録する</button>
+      <button class="btn btn-outline btn-sm" id="memo-save-btn" onclick="saveMemo()">記録する</button>
       <span id="memo-saved" class="text-sm" style="display:none; margin-left:0.5rem; color:var(--success);">✓ 保存しました</span>
     </div>
     <div class="text-center mt2">
-      <button class="btn" onclick="resetSession()">ホームへ戻る</button>
+      <button class="btn" id="result-home-btn" onclick="goHomeFromResult()">ホームへ戻る</button>
     </div>
   </div>
 </div>
@@ -5373,6 +5379,33 @@ function updateMemoCounter() {
   const remaining = Math.max(0, max - memoEl.value.length);
   counter.textContent = `残り ${remaining}文字`;
   counter.classList.toggle('memo-counter-low', remaining <= 20);
+  updateMemoActionState();
+}
+
+// 記入中のメモがあるときは「記録する」を主ボタンにし、ホームへ戻るを控えめにする
+let savedResultMemo = '';
+function hasUnsavedMemo() {
+  const memo = document.getElementById('result-memo')?.value.trim() || '';
+  return memo !== '' && memo !== savedResultMemo;
+}
+function updateMemoActionState() {
+  const saveBtn = document.getElementById('memo-save-btn');
+  const homeBtn = document.getElementById('result-home-btn');
+  if (!saveBtn || !homeBtn) return;
+  const unsaved = hasUnsavedMemo();
+  saveBtn.classList.toggle('btn-outline', !unsaved);
+  saveBtn.classList.toggle('btn-sm', !unsaved);
+  saveBtn.classList.toggle('memo-save-emphasis', unsaved);
+  saveBtn.textContent = unsaved ? 'このメモを記録する' : '記録する';
+  homeBtn.classList.toggle('btn-outline', unsaved);
+  homeBtn.classList.toggle('btn-sm', unsaved);
+}
+function goHomeFromResult() {
+  if (hasUnsavedMemo() && !confirm('一言メモがまだ記録されていません。記録せずにホームへ戻りますか？')) {
+    document.getElementById('result-memo')?.focus();
+    return;
+  }
+  resetSession();
 }
 
 function saveMemo() {
@@ -5381,6 +5414,8 @@ function saveMemo() {
   if (data.sessions.length > 0) {
     data.sessions[data.sessions.length - 1].memo = memo;
     DB.save(data);
+    savedResultMemo = memo;
+    updateMemoActionState();
   }
   document.getElementById('memo-saved').style.display = 'inline';
   setTimeout(() => { document.getElementById('memo-saved').style.display = 'none'; }, 2000);
@@ -5389,6 +5424,7 @@ function saveMemo() {
 function resetSession() {
   document.getElementById('session-result').style.display = 'none';
   document.getElementById('result-memo').value = '';
+  savedResultMemo = '';
   updateMemoCounter();
   document.getElementById('result-badges').style.display = 'none';
   sessionStart = null;
